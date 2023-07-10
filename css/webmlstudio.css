@@ -1,0 +1,35 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Shadows+Into+Light&display=swap');
+
+.brand {
+    font-family: 'Shadows Into Light', cursive !important;
+    font-weight: bolder;
+    margin-top: .5rem; 
+}
+
+.center-text-content {
+    text-align: center;
+}
+
+/*
+ * Footer stuff
+*/
+
+.footer-bottom {
+    position: absolute;
+    bottom: 0;
+    max-width: 100% !important;
+}
+
+
+/*
+ *Main content block
+*/
+
+#greeting-mainconent {
+    display: block;
+}
+
+#project-selector-mainconent {
+    display: none;
+}

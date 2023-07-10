@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Web ML Studio</title>
+    <meta
+      name="description"
+      content="Web based machine learning studio."
+    />
+    <link rel="shortcut icon" href="https://picocss.com/favicon.ico" />
+    <link rel="canonical" href="https://picocss.com/examples/basic-template/" />
+
+    <!-- Pico.css -->
+    <!--<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css" />-->
+    <link rel="stylesheet" href="css/pico.min.css" />
+
+    <!-- Custom template-->
+    <link rel="stylesheet" href="css/custom.css" />
+
+    <!-- WebMLStudio styles-->
+    <link rel="stylesheet" href="css/webmlstudio.css" />
+
+    <!--Font Awsome-->
+    <link href="/assets/fontawesome/css/all.css" rel="stylesheet">
+  </head>
+
+  <body>
+    <!-- Header -->
+    <header class="container">
+      <nav>
+        <hgroup>
+            <h1 class="brand" onclick="maincontentSwitcher.toGreeting()">WebMLStudio</h1>
+          </hgroup>
+        <ul>
+          <li>
+            <details role="list" dir="rtl">
+              <summary aria-haspopup="listbox" role="list" class="secondary"><i class="fa-solid fa-circle-half-stroke auto-margin"></i></summary>
+              <ul role="listbox">
+                <li><a href="#" data-theme-switcher="auto">Auto</a></li>
+                <li><a href="#" data-theme-switcher="light">Light</a></li>
+                <li><a href="#" data-theme-switcher="dark">Dark</a></li>
+              </ul>
+            </details>
+          </li>
+        </ul>
+      </nav>
+    </header>
+    <!-- ./ Header -->
+
+    <!-- Main -->
+    <main class="container">
+      
+      <div id="greeting-mainconent" class="center-text-content">
+        <p>
+          Welcome to WebMLStudio! <br/>
+          <i class="fa-solid fa-robot"></i> <br/>
+        </p>
+        <a href="#" role="button" onclick="maincontentSwitcher.toProjectSelector()">Enter WebMLStudio</a>
+      </div>
+
+      <div id="project-selector-mainconent" class="center-text-content">
+        <p>
+          Select type of project <br/>
+          <i class="fa-solid fa-robot"></i> <br/>
+        </p>
+
+        <div class="grid">
+          <div>
+            <article>
+              <header>
+                MobileNet 
+              </header>
+              Make your own "Teachable Machine" using Transfer Learning with MobileNet v3 in TensorFlow.js using saved graph model from TFHub
+              <footer>
+                <a href="#" role="button" onclick="maincontentSwitcher.toMobilenetTraining()">MobileNet</a>
+              </footer>
+            </article>
+          </div>
+          <div>
+            <article>
+              <a href="#" role="button" onclick="">Text</a>
+            </article>
+          </div>
+          <div>
+            <article>
+              <a href="#" role="button" onclick="">Custom</a>
+            </article>
+          </div>
+          <div>
+            <article>
+              <a href="#" role="button" onclick="">Projects</a>
+            </article>
+          </div>        
+        </div>
+
+        <div class="grid">
+          <div>
+            <article>
+              <a href="#" role="button" onclick="">Image</a>
+            </article>
+          </div>
+          <div>
+            <article>
+              <a href="#" role="button" onclick="">Text</a>
+            </article>
+          </div>
+          <div>
+            <article>
+              <a href="#" role="button" onclick="">Custom</a>
+            </article>
+          </div>
+          <div>
+            <article>
+              <a href="#" role="button" onclick="">Projects</a>
+            </article>
+          </div>        
+        </div>
+      </div>
+      
+      <!--Projects-->
+
+      <!--MobileNet training-->
+      <mobilenet-training id="mobilenet-training-maincontent"></mobilenet-training>
+      
+    </main>
+    <!-- ./ Main -->
+
+    <!-- Footer -->
+    <!--
+    <footer class="container footer-bottom center-text-content">
+      <small>  
+        <a href="#">WebMLStudio</a> • 2023
+      </small>
+    </footer>
+    -->
+    <!-- ./ Footer -->
+
+  
+
+
+    <!-- Minimal theme switcher -->
+    <script src="js/utils/minimal-theme-switcher.js"></script>
+
+    <!-- Minimal main content switcher -->
+    <script src="js/utils/minimal-maincontent-switcher.js"></script>
+
+    <!-- Import TensorFlow.js library -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js" type="text/javascript"></script>
+
+    <!-- Import TensorFlow.js library - does not work, have to fix it-->
+    <!--<script src="assets/tensorflow/tf480/tf.min.js" type="text/javascript"></script>-->
+    
+
+    <!--Custom components-->
+    <script module src="js/components/mobilenet-training-component.js" type="text/javascript"></script>
+
+  </body>
+</html>
