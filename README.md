@@ -1,2 +1,2 @@
 # WebMLStudio
-Machine Learning using web technology
+Web based machine learning studio.
