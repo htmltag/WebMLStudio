@@ -35,9 +35,7 @@ text-align: center;
         <ul>
             <li><a href="#" role="button" id="load-btn">Load</a></li>
             <li><a href="#" role="button" id="missing-btn">Missing Data</a></li>
-            <li><a href="#" role="button" id="operations-btn">Operations</a></li>
-            <li><a href="#" role="button" id="merge-btn">Merge</a></li>
-            <li><a href="#" role="button" id="group-btn">Grouping</a></li>
+            <li><a href="#" role="button" id="drop-btn">Drop</a></li>
             <li><a href="#" role="button" id="save-btn">Save</a></li>
             <li><a href="#" role="button" id="play-btn"><i class="fa-solid fa-play"></i></a></li>
             <li><a href="#" role="button" id="empty-btn" class="warning"><i class="fa-solid fa-trash-can"></i></a></li>
@@ -77,16 +75,18 @@ text-align: center;
         </div>
         <hr/>
         <div class="grid">
-        Fill missing data with: <input type="text" id="value-missing-data"><button id="fill-missing-data-btn">Fill</button>
+        <input type="text" placeholder="Fill missing data with" id="value-missing-data"><button id="fill-missing-data-btn">Fill</button>
         </div>
         <hr/>
         <div class="grid">
-        Fill missing data in column:<input type="text" id="column-missing-data"> with: <input type="text" id="column-value-missing-data"> <button id="fill-missing-column-data-btn">Fill</button>
+        <input type="text" placeholder="Column" id="column-missing-data"><input type="text" placeholder="Value" id="column-value-missing-data"> <button id="fill-missing-column-data-btn">Fill</button>
         </div>
     </div>
-    <div id="panel-operations">Operations</div>
-    <div id="panel-merge">Merge</div>
-    <div id="panel-grouping">Grouping</div>
+    <div id="panel-drop">
+        <div class="grid">
+            <input type="txt" placeholder="Colomn name" id="drop-column"><button id="drop-column-by-name-btn">Drop</button>
+        </div>
+    </div>
     <div id="panel-save">
         <div class="grid">
             <input type="txt" id="filename" placeholder="filename">
@@ -126,6 +126,7 @@ class DanfoEditor {
         this.VALUE_MISSING_DATA = shadow.querySelector("#value-missing-data");
         this.COLUMN_MISSING_DATA = shadow.querySelector("#column-missing-data");
         this.COLUMN_VALUE_MISSING_DATA = shadow.querySelector("#column-value-missing-data");
+        this.DROP_COLUMN = shadow.querySelector("#drop-column");
 
         shadow.querySelector("#play-btn").addEventListener('click', this.play.bind(this));
         shadow.querySelector("#empty-btn").addEventListener('click', this.empty.bind(this));
@@ -138,6 +139,7 @@ class DanfoEditor {
         shadow.querySelector("#drop-row-btn").addEventListener('click', this.dropRow.bind(this));
         shadow.querySelector("#fill-missing-data-btn").addEventListener('click', this.fillMissingData.bind(this));
         shadow.querySelector("#fill-missing-column-data-btn").addEventListener('click', this.fillColumnMissingData.bind(this));
+        shadow.querySelector("#drop-column-by-name-btn").addEventListener('click', this.dropColumn.bind(this));
     }
 
     empty() {
@@ -255,11 +257,16 @@ class DanfoEditor {
     }
 
     fillColumnMissingData() {
-        console.log("fillColumnMissingData");
         if (this.COLUMN_VALUE_MISSING_DATA.value === "") alert("fill in a value");
         if (this.COLUMN_MISSING_DATA.value === "") alert("fill in a column");
        this.#df = this.#df.fillNa([this.COLUMN_VALUE_MISSING_DATA.value], { columns: [this.COLUMN_MISSING_DATA.value] })
        this.play();
+    }
+
+    dropColumn() {
+        if (this.DROP_COLUMN.value === "") alert("Fill in column name");
+        this.#df.drop({ columns: this.DROP_COLUMN.value.split(',').map(item=>item.trim()), inplace: true });
+        this.play();
     }
 }
 
@@ -268,16 +275,12 @@ class DanfoContentSwitcher {
     constructor(shadow) {
         this.PANEL_LOAD = shadow.querySelector("#panel-load");
         this.PANEL_MISSING = shadow.querySelector("#panel-missing");
-        this.PANEL_OPERATIONS = shadow.querySelector("#panel-operations");
-        this.PANEL_MERGE = shadow.querySelector("#panel-merge");
-        this.PANEL_GROUPING = shadow.querySelector("#panel-grouping");
+        this.PANEL_DROP = shadow.querySelector("#panel-drop");
         this.PANEL_SAVE = shadow.querySelector("#panel-save");
 
         shadow.querySelector("#load-btn").addEventListener('click', this.showLoad.bind(this));
         shadow.querySelector("#missing-btn").addEventListener('click', this.showMissingData.bind(this));
-        shadow.querySelector("#operations-btn").addEventListener('click', this.showOperations.bind(this));
-        shadow.querySelector("#merge-btn").addEventListener('click', this.showMerge.bind(this));
-        shadow.querySelector("#group-btn").addEventListener('click', this.showGrouping.bind(this));
+        shadow.querySelector("#drop-btn").addEventListener('click', this.showDrop.bind(this));
         shadow.querySelector("#save-btn").addEventListener('click', this.showSave.bind(this));
         this.hideAll();
         this.PANEL_LOAD.classList.add("show");
@@ -293,19 +296,9 @@ class DanfoContentSwitcher {
         this.PANEL_MISSING.classList.add("show");
     }
 
-    showOperations() {
+    showDrop() {
         this.hideAll();
-        this.PANEL_OPERATIONS.classList.add("show");
-    }
-
-    showMerge() {
-        this.hideAll();
-        this.PANEL_MERGE.classList.add("show");
-    }
-
-    showGrouping() {
-        this.hideAll();
-        this.PANEL_GROUPING.classList.add("show");
+        this.PANEL_DROP.classList.add("show");
     }
 
     showSave() {
@@ -320,14 +313,8 @@ class DanfoContentSwitcher {
         this.PANEL_MISSING.classList.remove("show");
         this.PANEL_MISSING.classList.add("hide");
 
-        this.PANEL_OPERATIONS.classList.remove("show");
-        this.PANEL_OPERATIONS.classList.add("hide");
-
-        this.PANEL_MERGE.classList.remove("show");
-        this.PANEL_MERGE.classList.add("hide");
-
-        this.PANEL_GROUPING.classList.remove("show");
-        this.PANEL_GROUPING.classList.add("hide");
+        this.PANEL_DROP.classList.remove("show");
+        this.PANEL_DROP.classList.add("hide");
 
         this.PANEL_SAVE.classList.remove("show");
         this.PANEL_SAVE.classList.add("hide");
