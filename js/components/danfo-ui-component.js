@@ -34,8 +34,6 @@ text-align: center;
     <nav>
         <ul>
             <li><a href="#" role="button" id="load-btn">Load</a></li>
-            <li><a href="#" role="button" id="view-btn">View</a></li>
-            <li><a href="#" role="button" id="select-btn">Selection</a></li>
             <li><a href="#" role="button" id="missing-btn">Missing Data</a></li>
             <li><a href="#" role="button" id="operations-btn">Operations</a></li>
             <li><a href="#" role="button" id="merge-btn">Merge</a></li>
@@ -72,9 +70,20 @@ text-align: center;
             </div>
         </div>
     </div>
-    <div id="panel-view">View</div>
-    <div id="panel-selection">Selection</div>
-    <div id="panel-missing">Missing Data</div>
+    <div id="panel-missing">
+        <div class="grid">
+            <button id="drop-column-btn">Drop column(s) with missing data</button>
+            <button id="drop-row-btn">Drop row(s) with missing data</button>
+        </div>
+        <hr/>
+        <div class="grid">
+        Fill missing data with: <input type="text" id="value-missing-data"><button id="fill-missing-data-btn">Fill</button>
+        </div>
+        <hr/>
+        <div class="grid">
+        Fill missing data in column:<input type="text" id="column-missing-data"> with: <input type="text" id="column-value-missing-data"> <button id="fill-missing-column-data-btn">Fill</button>
+        </div>
+    </div>
     <div id="panel-operations">Operations</div>
     <div id="panel-merge">Merge</div>
     <div id="panel-grouping">Grouping</div>
@@ -87,7 +96,7 @@ text-align: center;
                 <option value="EXCEL">Excel</option>
                 <option value="CSV">CSV</option>
             </select>
-            <button id="to-csv-btn">Download</button>
+            <button id="download-btn">Download</button>
         </div>
         <hr/>
         <h2>Local storage</h2>
@@ -114,14 +123,21 @@ class DanfoEditor {
         this.DELIMITER = shadow.querySelector("#delimiter");
         this.FILENAME = shadow.querySelector("#filename");
         this.SELECT_FILETYPE_DOWNLOAD = shadow.querySelector("#select-filetype-download");
+        this.VALUE_MISSING_DATA = shadow.querySelector("#value-missing-data");
+        this.COLUMN_MISSING_DATA = shadow.querySelector("#column-missing-data");
+        this.COLUMN_VALUE_MISSING_DATA = shadow.querySelector("#column-value-missing-data");
 
         shadow.querySelector("#play-btn").addEventListener('click', this.play.bind(this));
         shadow.querySelector("#empty-btn").addEventListener('click', this.empty.bind(this));
         shadow.querySelector("#file-dataset").addEventListener('change', this.loadInputFile.bind(this));
         shadow.querySelector("#select-filetype-load").addEventListener('change', this.selectFiletypeLoadChange.bind(this));
-        shadow.querySelector("#select-filetype-download").addEventListener('change', this.selectFiletypeLoadChange.bind(this));
+        shadow.querySelector("#select-filetype-download").addEventListener('change', this.selectFiletypeDownloadChange.bind(this));
         shadow.querySelector("#load-from-url").addEventListener('click', this.loadFromURL.bind(this));
-        
+        shadow.querySelector("#download-btn").addEventListener('click', this.downloadFile.bind(this));
+        shadow.querySelector("#drop-column-btn").addEventListener('click', this.dropColumn.bind(this));
+        shadow.querySelector("#drop-row-btn").addEventListener('click', this.dropRow.bind(this));
+        shadow.querySelector("#fill-missing-data-btn").addEventListener('click', this.fillMissingData.bind(this));
+        shadow.querySelector("#fill-missing-column-data-btn").addEventListener('click', this.fillColumnMissingData.bind(this));
     }
 
     empty() {
@@ -153,21 +169,25 @@ class DanfoEditor {
         switch (this.#selectedFiletypeLoad) {
             case 'NONE':
                 alert("Select filetype");
+                break;
             case 'JSON':
                 dfd.readJSON(inputfile).then((df) => {
                     this.#df = df;
                     this.play();
-                })
+                });
+                break;
             case 'EXCEL':
                 dfd.readExcel(inputfile).then((df) => {
                     this.#df = df;
                     this.play();
                 })
+                break;
             case 'CSV':
                 dfd.readCSV(inputfile, {delimeter: delimiter}).then((df) => {
                     this.#df = df;
                     this.play();
-                })
+                });
+                break;
         }
     }
 
@@ -178,33 +198,75 @@ class DanfoEditor {
         switch (this.#selectedFiletypeLoad) {
             case 'NONE':
                 alert("Select filetype");
+                break;
             case 'JSON':
                 dfd.readJSON(url).then((df) => {
                     this.#df = df;
                     this.play();
-                })
+                });
+                break;
             case 'EXCEL':
                 dfd.readExcel(url).then((df) => {
                     this.#df = df;
                     this.play();
-                })
+                });
+                break;
             case 'CSV':
                 dfd.readCSV(url, {delimeter: delimiter}).then((df) => {
                     this.#df = df;
                     this.play();
-                })
+                });
+                break;
         }
     }
 
-    DownloadFile(){}
+    downloadFile(){
+        const filenameToDownload = this.FILENAME.value ? this.FILENAME.value : "web-ml-studio-data";
+        switch (this.#selectedFiletypeDownload) {
+            case 'NONE':
+                alert("Select filetype");
+                break;
+            case 'JSON':
+                dfd.toJSON(this.#df, { fileName: filenameToDownload + ".json", download: true });
+                break;
+            case 'EXCEL':
+                dfd.toExcel(this.#df, { fileName: filenameToDownload + ".xlsx"});
+                break;
+            case 'CSV':
+                dfd.toCSV(this.#df, { fileName: filenameToDownload + ".csv", download: true});
+                break;
+        }
+    }
+
+    dropColumn(){
+        this.#df = this.#df.dropNa({axis: 0});
+        this.play();
+    }
+
+    dropRow(){
+        this.#df = this.#df.dropNa({axis: 1});
+        this.play();
+    }
+
+    fillMissingData() {
+        if (this.VALUE_MISSING_DATA.value === "") alert("fill in a value");
+       this.#df = this.#df.fillNa(this.VALUE_MISSING_DATA.value); 
+       this.play();
+    }
+
+    fillColumnMissingData() {
+        console.log("fillColumnMissingData");
+        if (this.COLUMN_VALUE_MISSING_DATA.value === "") alert("fill in a value");
+        if (this.COLUMN_MISSING_DATA.value === "") alert("fill in a column");
+       this.#df = this.#df.fillNa([this.COLUMN_VALUE_MISSING_DATA.value], { columns: [this.COLUMN_MISSING_DATA.value] })
+       this.play();
+    }
 }
 
 class DanfoContentSwitcher {
 
     constructor(shadow) {
         this.PANEL_LOAD = shadow.querySelector("#panel-load");
-        this.PANEL_VIEW = shadow.querySelector("#panel-view");
-        this.PANEL_SELECTION = shadow.querySelector("#panel-selection");
         this.PANEL_MISSING = shadow.querySelector("#panel-missing");
         this.PANEL_OPERATIONS = shadow.querySelector("#panel-operations");
         this.PANEL_MERGE = shadow.querySelector("#panel-merge");
@@ -212,8 +274,6 @@ class DanfoContentSwitcher {
         this.PANEL_SAVE = shadow.querySelector("#panel-save");
 
         shadow.querySelector("#load-btn").addEventListener('click', this.showLoad.bind(this));
-        shadow.querySelector("#view-btn").addEventListener('click', this.showView.bind(this));
-        shadow.querySelector("#select-btn").addEventListener('click', this.showSelection.bind(this));
         shadow.querySelector("#missing-btn").addEventListener('click', this.showMissingData.bind(this));
         shadow.querySelector("#operations-btn").addEventListener('click', this.showOperations.bind(this));
         shadow.querySelector("#merge-btn").addEventListener('click', this.showMerge.bind(this));
@@ -226,16 +286,6 @@ class DanfoContentSwitcher {
     showLoad() {
         this.hideAll();
         this.PANEL_LOAD.classList.add("show");
-    }
-
-    showView() {
-        this.hideAll();
-        this.PANEL_VIEW.classList.add("show");
-    }
-
-    showSelection() {
-        this.hideAll();
-        this.PANEL_SELECTION.classList.add("show");
     }
 
     showMissingData() {
@@ -266,12 +316,6 @@ class DanfoContentSwitcher {
     hideAll(){
         this.PANEL_LOAD.classList.remove("show");
         this.PANEL_LOAD.classList.add("hide");
-
-        this.PANEL_VIEW.classList.remove("show");
-        this.PANEL_VIEW.classList.add("hide");
-
-        this.PANEL_SELECTION.classList.remove("show");
-        this.PANEL_SELECTION.classList.add("hide");
 
         this.PANEL_MISSING.classList.remove("show");
         this.PANEL_MISSING.classList.add("hide");
