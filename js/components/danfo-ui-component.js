@@ -36,6 +36,7 @@ text-align: center;
             <li><a href="#" role="button" id="load-btn">Load</a></li>
             <li><a href="#" role="button" id="missing-btn">Missing Data</a></li>
             <li><a href="#" role="button" id="drop-btn">Drop</a></li>
+            <li><a href="#" role="button" id="replace-btn">Replace</a></li>
             <li><a href="#" role="button" id="save-btn">Save</a></li>
             <li><a href="#" role="button" id="play-btn"><i class="fa-solid fa-play"></i></a></li>
             <li><a href="#" role="button" id="empty-btn" class="warning"><i class="fa-solid fa-trash-can"></i></a></li>
@@ -84,7 +85,15 @@ text-align: center;
     </div>
     <div id="panel-drop">
         <div class="grid">
-            <input type="txt" placeholder="Colomn name" id="drop-column"><button id="drop-column-by-name-btn">Drop</button>
+            <input type="txt" placeholder="Column name" id="drop-column"><button id="drop-column-by-name-btn">Drop</button>
+        </div>
+    </div>
+    <div id="panel-replace">
+        <div class="grid">
+        <input type="txt" placeholder="Column (empty is all)" id="replace-column">
+        <input type="txt" placeholder="Old value" id="replace-old-value">
+        <input type="txt" placeholder="New value" id="replace-new-value">
+        <button id="replace-value-btn">Replace</button>
         </div>
     </div>
     <div id="panel-save">
@@ -127,6 +136,10 @@ class DanfoEditor {
         this.COLUMN_MISSING_DATA = shadow.querySelector("#column-missing-data");
         this.COLUMN_VALUE_MISSING_DATA = shadow.querySelector("#column-value-missing-data");
         this.DROP_COLUMN = shadow.querySelector("#drop-column");
+        this.REPLACE_COLUMN = shadow.querySelector("#replace-column");
+        this.REPLACE_OLD_VALUE = shadow.querySelector("#replace-old-value");
+        this.REPLACE_NEW_VALUE = shadow.querySelector("#replace-new-value");
+ 
 
         shadow.querySelector("#play-btn").addEventListener('click', this.play.bind(this));
         shadow.querySelector("#empty-btn").addEventListener('click', this.empty.bind(this));
@@ -140,6 +153,7 @@ class DanfoEditor {
         shadow.querySelector("#fill-missing-data-btn").addEventListener('click', this.fillMissingData.bind(this));
         shadow.querySelector("#fill-missing-column-data-btn").addEventListener('click', this.fillColumnMissingData.bind(this));
         shadow.querySelector("#drop-column-by-name-btn").addEventListener('click', this.dropColumn.bind(this));
+        shadow.querySelector("#replace-value-btn").addEventListener('click', this.replaceValue.bind(this));
     }
 
     empty() {
@@ -268,6 +282,19 @@ class DanfoEditor {
         this.#df.drop({ columns: this.DROP_COLUMN.value.split(',').map(item=>item.trim()), inplace: true });
         this.play();
     }
+
+    replaceValue() {
+        if (this.REPLACE_OLD_VALUE.value === "") alert("Fill in old value");
+        if (this.REPLACE_NEW_VALUE.value === "") alert("Fill in new value");
+        const oldValue = Number(this.REPLACE_OLD_VALUE.value) === NaN ? this.REPLACE_OLD_VALUE.value : Number(this.REPLACE_OLD_VALUE.value);  
+        const newValue = Number(this.REPLACE_NEW_VALUE.value) === NaN ? this.REPLACE_NEW_VALUE.value : Number(this.REPLACE_NEW_VALUE.value);  
+        if (this.REPLACE_COLUMN.value === "") {
+            this.#df = this.#df.replace(oldValue, newValue);
+        } else {
+            this.#df = this.#df.replace(oldValue, newValue, {columns: this.REPLACE_COLUMN.value.split(',').map(item=>item.trim())});
+        }
+        this.play();
+    }
 }
 
 class DanfoContentSwitcher {
@@ -276,11 +303,13 @@ class DanfoContentSwitcher {
         this.PANEL_LOAD = shadow.querySelector("#panel-load");
         this.PANEL_MISSING = shadow.querySelector("#panel-missing");
         this.PANEL_DROP = shadow.querySelector("#panel-drop");
+        this.PANEL_REPLACE = shadow.querySelector("#panel-replace");
         this.PANEL_SAVE = shadow.querySelector("#panel-save");
 
         shadow.querySelector("#load-btn").addEventListener('click', this.showLoad.bind(this));
         shadow.querySelector("#missing-btn").addEventListener('click', this.showMissingData.bind(this));
         shadow.querySelector("#drop-btn").addEventListener('click', this.showDrop.bind(this));
+        shadow.querySelector("#replace-btn").addEventListener('click', this.showReplace.bind(this));
         shadow.querySelector("#save-btn").addEventListener('click', this.showSave.bind(this));
         this.hideAll();
         this.PANEL_LOAD.classList.add("show");
@@ -301,6 +330,11 @@ class DanfoContentSwitcher {
         this.PANEL_DROP.classList.add("show");
     }
 
+    showReplace(){
+        this.hideAll();
+        this.PANEL_REPLACE.classList.add("show");
+    }
+
     showSave() {
         this.hideAll();
         this.PANEL_SAVE.classList.add("show");
@@ -315,6 +349,9 @@ class DanfoContentSwitcher {
 
         this.PANEL_DROP.classList.remove("show");
         this.PANEL_DROP.classList.add("hide");
+
+        this.PANEL_REPLACE.classList.remove("show");
+        this.PANEL_REPLACE.classList.add("hide");
 
         this.PANEL_SAVE.classList.remove("show");
         this.PANEL_SAVE.classList.add("hide");
