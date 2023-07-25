@@ -34,6 +34,7 @@ text-align: center;
     <nav>
         <ul>
             <li><a href="#" role="button" id="load-btn">Load</a></li>
+            <li><a href="#" role="button" id="view-btn">View</a></li>
             <li><a href="#" role="button" id="missing-btn">Missing Data</a></li>
             <li><a href="#" role="button" id="drop-btn">Drop</a></li>
             <li><a href="#" role="button" id="replace-btn">Replace</a></li>
@@ -67,6 +68,15 @@ text-align: center;
             <div>
                 <h2>Local storage</h2>
             </div>
+        </div>
+    </div>
+    <div id="panel-view">
+        <div class="grid">
+            <button id="scatter-btn">Scatter Plots</button>
+            <button id="bar-chart-btn">Bar Chart</button>
+            <button id="line-chart-btn">Line Chart</button>
+            <button id="ctype-btn">Column types</button>
+            <button id="table-view-btn">Table</button>
         </div>
     </div>
     <div id="panel-missing">
@@ -142,6 +152,11 @@ class DanfoEditor {
  
 
         shadow.querySelector("#play-btn").addEventListener('click', this.play.bind(this));
+        shadow.querySelector("#scatter-btn").addEventListener('click', this.scatterPlot.bind(this));
+        shadow.querySelector("#table-view-btn").addEventListener('click', this.play.bind(this));
+        shadow.querySelector("#bar-chart-btn").addEventListener('click', this.barChart.bind(this));
+        shadow.querySelector("#line-chart-btn").addEventListener('click', this.lineChart.bind(this));
+        shadow.querySelector("#ctype-btn").addEventListener('click', this.ctypeTable.bind(this));
         shadow.querySelector("#empty-btn").addEventListener('click', this.empty.bind(this));
         shadow.querySelector("#file-dataset").addEventListener('change', this.loadInputFile.bind(this));
         shadow.querySelector("#select-filetype-load").addEventListener('change', this.selectFiletypeLoadChange.bind(this));
@@ -169,6 +184,22 @@ class DanfoEditor {
             this.DANFO_OUTPUT_ELEMENT.innerHTML = "Ooops! Something whent wrong. \n" + err;
         }
         
+    }
+
+    scatterPlot(){
+        this.#df.plot(this.DANFO_OUTPUT_ELEMENT).scatter();
+    }
+
+    barChart() {
+        this.#df.plot(this.DANFO_OUTPUT_ELEMENT).bar();
+    }
+
+    lineChart() {
+        this.#df.plot(this.DANFO_OUTPUT_ELEMENT).line();
+    }
+
+    ctypeTable() {
+        this.#df.ctypes.plot(this.DANFO_OUTPUT_ELEMENT).table();
     }
 
     selectFiletypeLoadChange() {
@@ -286,8 +317,8 @@ class DanfoEditor {
     replaceValue() {
         if (this.REPLACE_OLD_VALUE.value === "") alert("Fill in old value");
         if (this.REPLACE_NEW_VALUE.value === "") alert("Fill in new value");
-        const oldValue = Number(this.REPLACE_OLD_VALUE.value) === NaN ? this.REPLACE_OLD_VALUE.value : Number(this.REPLACE_OLD_VALUE.value);  
-        const newValue = Number(this.REPLACE_NEW_VALUE.value) === NaN ? this.REPLACE_NEW_VALUE.value : Number(this.REPLACE_NEW_VALUE.value);  
+        const oldValue = isNaN(this.REPLACE_OLD_VALUE.value) ? this.REPLACE_OLD_VALUE.value : Number(this.REPLACE_OLD_VALUE.value);  
+        const newValue = isNaN(this.REPLACE_NEW_VALUE.value) ? this.REPLACE_NEW_VALUE.value : Number(this.REPLACE_NEW_VALUE.value);  
         if (this.REPLACE_COLUMN.value === "") {
             this.#df = this.#df.replace(oldValue, newValue);
         } else {
@@ -301,12 +332,14 @@ class DanfoContentSwitcher {
 
     constructor(shadow) {
         this.PANEL_LOAD = shadow.querySelector("#panel-load");
+        this.PANEL_VIEW = shadow.querySelector("#panel-view");
         this.PANEL_MISSING = shadow.querySelector("#panel-missing");
         this.PANEL_DROP = shadow.querySelector("#panel-drop");
         this.PANEL_REPLACE = shadow.querySelector("#panel-replace");
         this.PANEL_SAVE = shadow.querySelector("#panel-save");
 
         shadow.querySelector("#load-btn").addEventListener('click', this.showLoad.bind(this));
+        shadow.querySelector("#view-btn").addEventListener('click', this.showView.bind(this));
         shadow.querySelector("#missing-btn").addEventListener('click', this.showMissingData.bind(this));
         shadow.querySelector("#drop-btn").addEventListener('click', this.showDrop.bind(this));
         shadow.querySelector("#replace-btn").addEventListener('click', this.showReplace.bind(this));
@@ -318,6 +351,11 @@ class DanfoContentSwitcher {
     showLoad() {
         this.hideAll();
         this.PANEL_LOAD.classList.add("show");
+    }
+
+    showView() {
+        this.hideAll();
+        this.PANEL_VIEW.classList.add("show");
     }
 
     showMissingData() {
@@ -343,6 +381,9 @@ class DanfoContentSwitcher {
     hideAll(){
         this.PANEL_LOAD.classList.remove("show");
         this.PANEL_LOAD.classList.add("hide");
+
+        this.PANEL_VIEW.classList.remove("show");
+        this.PANEL_VIEW.classList.add("hide");
 
         this.PANEL_MISSING.classList.remove("show");
         this.PANEL_MISSING.classList.add("hide");
