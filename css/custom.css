@@ -5,10 +5,11 @@
 
  :root {
    --font-family: 'Montserrat', sans-serif;
-   --border-radius: 0;
+   --border-radius: 0.1rem;
    --spacing: 0.5rem;
-   --form-element-spacing-vertical: 1rem;
-   --form-element-spacing-horizontal: 1.25rem;
+   --form-element-spacing-vertical: 0.5rem;
+   --form-element-spacing-horizontal: 0.5rem;
+   --line-height: 1rem;
  }
  
  h1,
@@ -51,7 +52,7 @@
  input[type=reset],
  input[type=button],
  a[role=button] {
-   --font-weight: 600;
+   --font-weight: 400;
  }
 
  hr {
@@ -68,6 +69,7 @@
 
  .warning {
   background-color: red;
+  border-color: #E82C0C;
  }
 
 
