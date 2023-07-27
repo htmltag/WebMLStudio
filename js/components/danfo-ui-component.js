@@ -165,7 +165,7 @@ class DanfoEditor {
     #selectedLocalStorageLoad = "NONE";
     #selectedFiletypeDownload = "NONE";
     #selectedLocalStorageSave = "NONE";
-    #selectArithmetic = "NONE";
+    #selectedArithmetic = "NONE";
     
 
     constructor(shadow) {
@@ -283,6 +283,10 @@ class DanfoEditor {
 
     selectLocalStorageSaveChange() {
         this.#selectedLocalStorageSave = this.SELECT_LOCALSTORAGE_SAVE.options[this.SELECT_LOCALSTORAGE_SAVE.selectedIndex].value;
+    }
+
+    selectArithmeticChange() {
+        this.#selectedArithmetic = this.SELECT_ARITHMETIC.options[this.SELECT_ARITHMETIC.selectedIndex].value;
     }
 
     loadInputFile() {
