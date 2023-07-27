@@ -41,6 +41,7 @@ text-align: center;
             <li><a href="#" role="button" id="missing-btn">Missing Data</a></li>
             <li><a href="#" role="button" id="drop-btn">Drop</a></li>
             <li><a href="#" role="button" id="replace-btn">Replace</a></li>
+            <li><a href="#" role="button" id="scalar-btn">Scalar</a></li>
             <li><a href="#" role="button" id="save-btn">Save</a></li>
             <li><a href="#" role="button" id="play-btn"><i class="fa-solid fa-play"></i></a></li>
             <li><a href="#" role="button" id="empty-btn" class="warning"><i class="fa-solid fa-trash-can"></i></a></li>
@@ -116,6 +117,20 @@ text-align: center;
         <button id="replace-value-btn">Replace</button>
         </div>
     </div>
+    <div id="panel-scalar">
+        <div class="grid">
+            <select id="select-arithmetic">
+                <option value="NONE" disabled selected>Select</option>
+                <option value="ADD">Add</option>
+                <option value="SUB">Subtract</option>
+                <option value="MUL">Multiply</option>
+                <option value="DIV">Divide</option>
+            </select>
+            <input type="txt" id="scalar-column" placeholder="Column">
+            <input type="txt" id="scalar-value" placeholder="Value">
+            <button id="scalar-apply-btn">Apply</button>
+        </div>
+    </div>
     <div id="panel-save">
         <div class="grid">
             <input type="txt" id="filename" placeholder="filename">
@@ -150,6 +165,7 @@ class DanfoEditor {
     #selectedLocalStorageLoad = "NONE";
     #selectedFiletypeDownload = "NONE";
     #selectedLocalStorageSave = "NONE";
+    #selectArithmetic = "NONE";
     
 
     constructor(shadow) {
@@ -170,6 +186,10 @@ class DanfoEditor {
         this.REPLACE_COLUMN = shadow.querySelector("#replace-column");
         this.REPLACE_OLD_VALUE = shadow.querySelector("#replace-old-value");
         this.REPLACE_NEW_VALUE = shadow.querySelector("#replace-new-value");
+        this.SELECT_ARITHMETIC = shadow.querySelector("#select-arithmetic");
+        this.SCALAR_COLUMN = shadow.querySelector("#scalar-column");
+        this.SCALAR_VALUE = shadow.querySelector("#scalar-value");
+
  
 
         shadow.querySelector("#play-btn").addEventListener('click', this.play.bind(this));
@@ -193,11 +213,13 @@ class DanfoEditor {
         shadow.querySelector("#load-localstorage-input-btn").addEventListener('click', this.loadLocalStorageInput.bind(this));
         shadow.querySelector("#load-localstorage-output-btn").addEventListener('click', this.loadLocalStorageOutput.bind(this));
         shadow.querySelector("#select-localstorage-load").addEventListener('change', this.selectLocalStorageLoadChange.bind(this));
-
         shadow.querySelector("#save-localstorage-input-btn").addEventListener('click', this.saveLocalStorageInput.bind(this));
         shadow.querySelector("#save-localstorage-output-btn").addEventListener('click', this.saveLocalStorageOutput.bind(this));
         shadow.querySelector("#select-localstorage-save").addEventListener('change', this.selectLocalStorageSaveChange.bind(this));
 
+        shadow.querySelector("#scalar-apply-btn").addEventListener('click', this.saveLocalStorageOutput.bind(this));
+        shadow.querySelector("#select-arithmetic").addEventListener('change', this.selectLocalStorageSaveChange.bind(this));
+        
         this.init();
     }
 
@@ -421,6 +443,7 @@ class DanfoContentSwitcher {
         this.PANEL_MISSING = shadow.querySelector("#panel-missing");
         this.PANEL_DROP = shadow.querySelector("#panel-drop");
         this.PANEL_REPLACE = shadow.querySelector("#panel-replace");
+        this.PANEL_SCALAR = shadow.querySelector("#panel-scalar");
         this.PANEL_SAVE = shadow.querySelector("#panel-save");
 
         shadow.querySelector("#load-btn").addEventListener('click', this.showLoad.bind(this));
@@ -428,6 +451,7 @@ class DanfoContentSwitcher {
         shadow.querySelector("#missing-btn").addEventListener('click', this.showMissingData.bind(this));
         shadow.querySelector("#drop-btn").addEventListener('click', this.showDrop.bind(this));
         shadow.querySelector("#replace-btn").addEventListener('click', this.showReplace.bind(this));
+        shadow.querySelector("#scalar-btn").addEventListener('click', this.showScalar.bind(this));
         shadow.querySelector("#save-btn").addEventListener('click', this.showSave.bind(this));
         this.hideAll();
         this.PANEL_LOAD.classList.add("show");
@@ -458,6 +482,11 @@ class DanfoContentSwitcher {
         this.PANEL_REPLACE.classList.add("show");
     }
 
+    showScalar(){
+        this.hideAll();
+        this.PANEL_SCALAR.classList.add("show");
+    }
+
     showSave() {
         this.hideAll();
         this.PANEL_SAVE.classList.add("show");
@@ -478,6 +507,9 @@ class DanfoContentSwitcher {
 
         this.PANEL_REPLACE.classList.remove("show");
         this.PANEL_REPLACE.classList.add("hide");
+
+        this.PANEL_SCALAR.classList.remove("show");
+        this.PANEL_SCALAR.classList.add("hide");
 
         this.PANEL_SAVE.classList.remove("show");
         this.PANEL_SAVE.classList.add("hide");
