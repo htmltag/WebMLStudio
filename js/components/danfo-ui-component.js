@@ -1,3 +1,6 @@
+import localDatastore from '../utils/local-datastore.js';
+import Datastore from '../models/datastore.js';
+
 const templateDanfo = document.createElement("template");
 templateDanfo.innerHTML = `
 <style>
@@ -67,11 +70,13 @@ text-align: center;
             </div>
             <div>
                 <h2>Local storage</h2>
-                <select id="select-localstorage-load">
-                    <option value="NONE" disabled selected>Dataset to load from</option>
-                </select>
-                <button id="load-localstorage-input-btn">Input</button>
-                <button id="load-localstorage-output-btn">Output</button>
+                <div class="grid">
+                    <select id="select-localstorage-load">
+                        <option value="NONE" disabled selected>Dataset to load from</option>
+                    </select>
+                    <button id="load-localstorage-input-btn">Input</button>
+                    <button id="load-localstorage-output-btn">Output</button>
+                </div>
             </div>
         </div>
     </div>
@@ -189,9 +194,9 @@ class DanfoEditor {
         shadow.querySelector("#load-localstorage-output-btn").addEventListener('click', this.loadLocalStorageOutput.bind(this));
         shadow.querySelector("#select-localstorage-load").addEventListener('change', this.selectLocalStorageLoadChange.bind(this));
 
-        shadow.querySelector("#save-localstorage-input-btn").addEventListener('click', this.loadLocalStorageInput.bind(this));
-        shadow.querySelector("#save-localstorage-output-btn").addEventListener('click', this.loadLocalStorageOutput.bind(this));
-        shadow.querySelector("#select-localstorage-save").addEventListener('change', this.selectLocalStorageLoadChange.bind(this));
+        shadow.querySelector("#save-localstorage-input-btn").addEventListener('click', this.saveLocalStorageInput.bind(this));
+        shadow.querySelector("#save-localstorage-output-btn").addEventListener('click', this.saveLocalStorageOutput.bind(this));
+        shadow.querySelector("#select-localstorage-save").addEventListener('change', this.selectLocalStorageSaveChange.bind(this));
 
         this.init();
     }
@@ -201,14 +206,13 @@ class DanfoEditor {
     }
 
     loadDatastoreNames() {
-        const names = localDatastore.names();
-        if(names?.lenght > 0) {
-            this.SELECT_LOCALSTORAGE_LOAD.remove();
-            this.SELECT_LOCALSTORAGE_LOAD.add(new Option("Dataset to load from", "NONE", true))
-            for (n of names) {
+        const names = localDatastore.getNames();
+        if(names?.length > 0) {
+            for (const n of names) {
                 this.SELECT_LOCALSTORAGE_LOAD.add(new Option(n, n));
+                this.SELECT_LOCALSTORAGE_SAVE.add(new Option(n, n));
             }
-            this.#datastores = localDatastore.datastores();
+            this.#datastores = localDatastore.getDatastores();
         }
     }
 
@@ -253,6 +257,10 @@ class DanfoEditor {
 
     selectFiletypeDownloadChange() {
         this.#selectedFiletypeDownload = this.SELECT_FILETYPE_DOWNLOAD.options[this.SELECT_FILETYPE_DOWNLOAD.selectedIndex].value;
+    }
+
+    selectLocalStorageSaveChange() {
+        this.#selectedLocalStorageSave = this.SELECT_LOCALSTORAGE_SAVE.options[this.SELECT_LOCALSTORAGE_SAVE.selectedIndex].value;
     }
 
     loadInputFile() {
@@ -313,13 +321,16 @@ class DanfoEditor {
     }
 
     loadLocalStorageInput(){
-        if(this.#selectedLocalStorageLoad === "NONE") alert("Select data to load from local storage");
-        this.#df = new dfd.DataFrame(this.#datastores.find((data) => data.name() === this.#selectedLocalStorageLoad).input());
+        if(this.#selectedLocalStorageLoad === "NONE") alert("Select or fill inn dataset to save to local storage");
+        this.#df = new dfd.DataFrame(JSON.parse(this.#datastores.find((data) => data.getName() === this.#selectedLocalStorageLoad).getInput()));
+        this.play();
     }
 
     loadLocalStorageOutput(){
         if(this.#selectedLocalStorageLoad === "NONE") alert("Select data to load from local storage");
-        this.#df = new dfd.DataFrame(this.#datastores.find((data) => data.name() === this.#selectedLocalStorageLoad).output());
+        console.log("Output: " + JSON.parse(this.#datastores.find((data) => data.getName() === this.#selectedLocalStorageLoad).getOutput()));
+        this.#df = new dfd.DataFrame(JSON.parse(this.#datastores.find((data) => data.getName() === this.#selectedLocalStorageLoad).getOutput()));
+        this.play();
     }
 
     downloadFile(){
@@ -337,6 +348,25 @@ class DanfoEditor {
             case 'CSV':
                 dfd.toCSV(this.#df, { fileName: filenameToDownload + ".csv", download: true});
                 break;
+        }
+    }
+
+    saveLocalStorageInput(){
+        if(this.#selectedLocalStorageSave === "NONE" && this.NEW_DATASET_NAME.value === "") alert("Select or fill inn dataset to save to local storage");
+        if(this.#selectedLocalStorageSave !== "NONE") {
+            localDatastore.addInputData(this.#selectedLocalStorageSave, dfd.toJSON(this.#df));
+        } else if (this.NEW_DATASET_NAME.value !== "") {
+            localDatastore.addInputData(this.NEW_DATASET_NAME.value, dfd.toJSON(this.#df));
+        }
+        console.log("Done save input");
+    }
+
+    saveLocalStorageOutput(){
+        if(this.#selectedLocalStorageSave === "NONE" && this.NEW_DATASET_NAME === "") alert("Select or fill inn dataset to save to local storage");
+        if(this.#selectedLocalStorageSave !== "NONE") {
+            localDatastore.addOutputData(this.#selectedLocalStorageSave, dfd.toJSON(this.#df));
+        } else if (this.NEW_DATASET_NAME.value !== "") {
+            localDatastore.addOutputData(this.NEW_DATASET_NAME.value, dfd.toJSON(this.#df));
         }
     }
 

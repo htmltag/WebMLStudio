@@ -1,4 +1,4 @@
-class Datastore {
+export default class Datastore {
     #name;
     #inputdata;
     #outputdata;
@@ -9,27 +9,27 @@ class Datastore {
         this.#outputdata = output;
     }
 
-    set input(indata) {
+    setInput(indata) {
         this.#inputdata = indata;
     }
 
-    get input() {
+    getInput() {
         return this.#inputdata;
     }
 
-    set output(outdata) {
+    setOutput(outdata) {
         this.#outputdata = outdata;
     }
 
-    get output() {
+    getOutput() {
         return this.#outputdata;
     }
 
-    get name() {
+    getName() {
         return this.#name;
     }
 
-    set name(name) {
+    setName(name) {
         this.#name = name;
     }
 }

@@ -4,14 +4,14 @@
 *
 */
 
-import { Datastore } from '../models/datastore';
+import Datastore from '../models/datastore.js';
 
 const localDatastore = {
-  prefixIn: "data_in_",
-  prefixOut: "data_out_",
+  prefixIn: "data_input_",
+  prefixOut: "data_output_",
   datanamesKey: "datanames",
   
-  get names() {
+  getNames() {
     if (localStorage.getItem(this.datanamesKey)?.length) {
         return JSON.parse(localStorage.getItem(this.datanamesKey));
     } else {
@@ -19,16 +19,14 @@ const localDatastore = {
     }
   },
 
-  get datastores() {
-    const names = this.names();
+  getDatastores() {
+    const names = this.getNames();
     let ds = [];
     if(names.length > 0) {
-        for (n of names) {
+        for (const n of names) {
             ds.push(new Datastore(n, localStorage.getItem(this.prefixIn + n), localStorage.getItem(this.prefixOut + n)));
         }
         return  ds;
-    } else {
-        return ds;
     }
   },
 
@@ -46,12 +44,14 @@ const localDatastore = {
 
   addInputData(name, input) {
     this.addName(name);
-    localStorage.setItem(this.prefixIn + name, input);
+    localStorage.setItem(this.prefixIn + name, JSON.stringify(input));
   },
 
   addOutputData(name, output) {
     this.addName(name);
-    localStorage.setItem(this.prefixIn + name, output);
+    localStorage.setItem(this.prefixOut + name, JSON.stringify(output));
   },
 
 }
+
+export default localDatastore;
