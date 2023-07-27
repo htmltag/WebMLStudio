@@ -67,6 +67,11 @@ text-align: center;
             </div>
             <div>
                 <h2>Local storage</h2>
+                <select id="select-localstorage-load">
+                    <option value="NONE" disabled selected>Dataset to load from</option>
+                </select>
+                <button id="load-localstorage-input-btn">Input</button>
+                <button id="load-localstorage-output-btn">Output</button>
             </div>
         </div>
     </div>
@@ -120,8 +125,12 @@ text-align: center;
         <hr/>
         <h2>Local storage</h2>
         <div class="grid">
-            <button id="localstorage-input-btn">Input</button>
-            <button id="localstorage-output-btn">Output</button>
+            <select id="select-localstorage-save">
+                <option value="NONE" disabled selected>Dataset to save to</option>
+            </select>
+            <input type="txt" id="new-dataset-name" placeholder="Or create new">
+            <button id="save-localstorage-input-btn">Input</button>
+            <button id="save-localstorage-output-btn">Output</button>
         </div>
     </div>
 
@@ -131,13 +140,20 @@ text-align: center;
 
 class DanfoEditor {
     #df;
+    #datastores;
     #selectedFiletypeLoad = "NONE";
+    #selectedLocalStorageLoad = "NONE";
     #selectedFiletypeDownload = "NONE";
+    #selectedLocalStorageSave = "NONE";
+    
 
     constructor(shadow) {
         this.DANFO_OUTPUT_ELEMENT = shadow.querySelector("#danfo-output");
         this.FILE_DATASET = shadow.querySelector("#file-dataset");
         this.SELECT_FILETYPE_LOAD = shadow.querySelector("#select-filetype-load");
+        this.SELECT_LOCALSTORAGE_LOAD = shadow.querySelector("#select-localstorage-load");
+        this.SELECT_LOCALSTORAGE_SAVE = shadow.querySelector("#select-localstorage-save");
+        this.NEW_DATASET_NAME = shadow.querySelector("#new-dataset-name");
         this.URL_TO_DATASET = shadow.querySelector("#url-to-dataset");
         this.DELIMITER = shadow.querySelector("#delimiter");
         this.FILENAME = shadow.querySelector("#filename");
@@ -169,6 +185,31 @@ class DanfoEditor {
         shadow.querySelector("#fill-missing-column-data-btn").addEventListener('click', this.fillColumnMissingData.bind(this));
         shadow.querySelector("#drop-column-by-name-btn").addEventListener('click', this.dropColumn.bind(this));
         shadow.querySelector("#replace-value-btn").addEventListener('click', this.replaceValue.bind(this));
+        shadow.querySelector("#load-localstorage-input-btn").addEventListener('click', this.loadLocalStorageInput.bind(this));
+        shadow.querySelector("#load-localstorage-output-btn").addEventListener('click', this.loadLocalStorageOutput.bind(this));
+        shadow.querySelector("#select-localstorage-load").addEventListener('change', this.selectLocalStorageLoadChange.bind(this));
+
+        shadow.querySelector("#save-localstorage-input-btn").addEventListener('click', this.loadLocalStorageInput.bind(this));
+        shadow.querySelector("#save-localstorage-output-btn").addEventListener('click', this.loadLocalStorageOutput.bind(this));
+        shadow.querySelector("#select-localstorage-save").addEventListener('change', this.selectLocalStorageLoadChange.bind(this));
+
+        this.init();
+    }
+
+    init() {
+         this.loadDatastoreNames();
+    }
+
+    loadDatastoreNames() {
+        const names = localDatastore.names();
+        if(names?.lenght > 0) {
+            this.SELECT_LOCALSTORAGE_LOAD.remove();
+            this.SELECT_LOCALSTORAGE_LOAD.add(new Option("Dataset to load from", "NONE", true))
+            for (n of names) {
+                this.SELECT_LOCALSTORAGE_LOAD.add(new Option(n, n));
+            }
+            this.#datastores = localDatastore.datastores();
+        }
     }
 
     empty() {
@@ -204,6 +245,10 @@ class DanfoEditor {
 
     selectFiletypeLoadChange() {
         this.#selectedFiletypeLoad = this.SELECT_FILETYPE_LOAD.options[this.SELECT_FILETYPE_LOAD.selectedIndex].value;
+    }
+
+    selectLocalStorageLoadChange() {
+        this.#selectedLocalStorageLoad = this.SELECT_LOCALSTORAGE_LOAD.options[this.SELECT_LOCALSTORAGE_LOAD.selectedIndex].value;
     }
 
     selectFiletypeDownloadChange() {
@@ -265,6 +310,16 @@ class DanfoEditor {
                 });
                 break;
         }
+    }
+
+    loadLocalStorageInput(){
+        if(this.#selectedLocalStorageLoad === "NONE") alert("Select data to load from local storage");
+        this.#df = new dfd.DataFrame(this.#datastores.find((data) => data.name() === this.#selectedLocalStorageLoad).input());
+    }
+
+    loadLocalStorageOutput(){
+        if(this.#selectedLocalStorageLoad === "NONE") alert("Select data to load from local storage");
+        this.#df = new dfd.DataFrame(this.#datastores.find((data) => data.name() === this.#selectedLocalStorageLoad).output());
     }
 
     downloadFile(){
