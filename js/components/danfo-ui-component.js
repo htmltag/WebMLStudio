@@ -216,9 +216,8 @@ class DanfoEditor {
         shadow.querySelector("#save-localstorage-input-btn").addEventListener('click', this.saveLocalStorageInput.bind(this));
         shadow.querySelector("#save-localstorage-output-btn").addEventListener('click', this.saveLocalStorageOutput.bind(this));
         shadow.querySelector("#select-localstorage-save").addEventListener('change', this.selectLocalStorageSaveChange.bind(this));
-
-        shadow.querySelector("#scalar-apply-btn").addEventListener('click', this.saveLocalStorageOutput.bind(this));
-        shadow.querySelector("#select-arithmetic").addEventListener('change', this.selectLocalStorageSaveChange.bind(this));
+        shadow.querySelector("#scalar-apply-btn").addEventListener('click', this.applyScalar.bind(this));
+        shadow.querySelector("#select-arithmetic").addEventListener('change', this.selectArithmeticChange.bind(this));
         
         this.init();
     }
@@ -320,7 +319,7 @@ class DanfoEditor {
     loadFromURL() {
         const url = this.URL_TO_DATASET.value;
         const delimiter = this.DELIMITER.value ? this.DELIMITER.value : ",";
-        console.log(url);
+
         switch (this.#selectedFiletypeLoad) {
             case 'NONE':
                 alert("Select filetype");
@@ -354,7 +353,6 @@ class DanfoEditor {
 
     loadLocalStorageOutput(){
         if(this.#selectedLocalStorageLoad === "NONE") alert("Select data to load from local storage");
-        console.log("Output: " + JSON.parse(this.#datastores.find((data) => data.getName() === this.#selectedLocalStorageLoad).getOutput()));
         this.#df = new dfd.DataFrame(JSON.parse(this.#datastores.find((data) => data.getName() === this.#selectedLocalStorageLoad).getOutput()));
         this.play();
     }
@@ -384,7 +382,6 @@ class DanfoEditor {
         } else if (this.NEW_DATASET_NAME.value !== "") {
             localDatastore.addInputData(this.NEW_DATASET_NAME.value, dfd.toJSON(this.#df));
         }
-        console.log("Done save input");
     }
 
     saveLocalStorageOutput(){
@@ -436,6 +433,39 @@ class DanfoEditor {
             this.#df = this.#df.replace(oldValue, newValue, {columns: this.REPLACE_COLUMN.value.split(',').map(item=>item.trim())});
         }
         this.play();
+    }
+
+    applyScalar(){
+        if (this.#selectedArithmetic === "") alert("Select type of arithmetic to use");
+        if (this.SCALAR_COLUMN.value === "") alert("Fill in a column");
+        if (this.SCALAR_VALUE.value === "") alert("Fill in a value");
+        
+        const valueToUse = isNaN(this.SCALAR_VALUE.value) ? this.SCALAR_VALUE.value : Number(this.SCALAR_VALUE.value);  
+        let columnAsArray = this.#df.column(this.SCALAR_COLUMN.value).values;
+
+        let newValuesArray = [];
+        columnAsArray.forEach((val) => {
+            switch (this.#selectedArithmetic) {
+                case "ADD":
+                    newValuesArray.push(val + valueToUse);
+                    break;
+                case "SUB":
+                    newValuesArray.push(val - valueToUse);
+                    break;
+                case "MUL":
+                    newValuesArray.push(val * valueToUse);
+                    break;
+                case "DIV":
+                    newValuesArray.push(val / valueToUse);
+                    break;
+            }
+        })
+
+        this.#df = this.#df.drop({ columns: [this.SCALAR_COLUMN.value] });
+        this.#df = this.#df.addColumn(this.SCALAR_COLUMN.value, newValuesArray);
+        
+        this.play();
+        
     }
 }
 
