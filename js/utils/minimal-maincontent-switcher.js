@@ -1,6 +1,6 @@
 const maincontentSwitcher = {
     //config 
-    contentList: ["greeting-mainconent", "project-selector-mainconent", "mobilenet-training-maincontent", "danfo-placeholder"],
+    contentList: ["greeting-mainconent", "project-selector-mainconent", "mobilenet-training-maincontent", "danfo-ui", "brain-ui"],
     sessionStorageKey: "currentMaincontent",
 
     init() {
@@ -56,8 +56,14 @@ const maincontentSwitcher = {
 
     toDanfo() {
       this.hideAll();
-      this.displayContent("danfo-placeholder");
-      this.maincontentToSessionStorage("danfo-placeholder");
+      this.displayContent("danfo-ui");
+      this.maincontentToSessionStorage("danfo-ui");
+    },
+
+    toBrainUI() {
+      this.hideAll();
+      this.displayContent("brain-ui");
+      this.maincontentToSessionStorage("brain-ui");
     },
     
 };

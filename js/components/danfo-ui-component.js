@@ -247,7 +247,7 @@ class DanfoEditor {
             this.#df.plot(this.DANFO_OUTPUT_ELEMENT).table();
         } catch(err) {
             console.log(err);
-            this.DANFO_OUTPUT_ELEMENT.innerHTML = "Ooops! Something whent wrong. \n" + err;
+            toastr.error("Ooops! Something whent wrong.", err);
         }
         
     }
@@ -293,7 +293,7 @@ class DanfoEditor {
         const delimiter = this.DELIMITER.value ? this.DELIMITER.value : ",";
         switch (this.#selectedFiletypeLoad) {
             case 'NONE':
-                alert("Select filetype");
+                toastr.error('Please select filetype');
                 break;
             case 'JSON':
                 dfd.readJSON(inputfile).then((df) => {
@@ -322,7 +322,7 @@ class DanfoEditor {
 
         switch (this.#selectedFiletypeLoad) {
             case 'NONE':
-                alert("Select filetype");
+                toastr.error('Please select filetype');
                 break;
             case 'JSON':
                 dfd.readJSON(url).then((df) => {
@@ -346,13 +346,13 @@ class DanfoEditor {
     }
 
     loadLocalStorageInput(){
-        if(this.#selectedLocalStorageLoad === "NONE") alert("Select or fill inn dataset to save to local storage");
+        if(this.#selectedLocalStorageLoad === "NONE") toastr.error("Select or fill inn dataset to save to local storage");
         this.#df = new dfd.DataFrame(JSON.parse(this.#datastores.find((data) => data.getName() === this.#selectedLocalStorageLoad).getInput()));
         this.play();
     }
 
     loadLocalStorageOutput(){
-        if(this.#selectedLocalStorageLoad === "NONE") alert("Select data to load from local storage");
+        if(this.#selectedLocalStorageLoad === "NONE") toastr.error("Select data to load from local storage");
         this.#df = new dfd.DataFrame(JSON.parse(this.#datastores.find((data) => data.getName() === this.#selectedLocalStorageLoad).getOutput()));
         this.play();
     }
@@ -361,7 +361,7 @@ class DanfoEditor {
         const filenameToDownload = this.FILENAME.value ? this.FILENAME.value : "web-ml-studio-data";
         switch (this.#selectedFiletypeDownload) {
             case 'NONE':
-                alert("Select filetype");
+                toastr.error("Please select filetype");
                 break;
             case 'JSON':
                 dfd.toJSON(this.#df, { fileName: filenameToDownload + ".json", download: true });
@@ -376,21 +376,23 @@ class DanfoEditor {
     }
 
     saveLocalStorageInput(){
-        if(this.#selectedLocalStorageSave === "NONE" && this.NEW_DATASET_NAME.value === "") alert("Select or fill inn dataset to save to local storage");
+        if(this.#selectedLocalStorageSave === "NONE" && this.NEW_DATASET_NAME.value === "") toastr.error("Select or fill inn dataset to save to local storage");
         if(this.#selectedLocalStorageSave !== "NONE") {
             localDatastore.addInputData(this.#selectedLocalStorageSave, dfd.toJSON(this.#df));
         } else if (this.NEW_DATASET_NAME.value !== "") {
             localDatastore.addInputData(this.NEW_DATASET_NAME.value, dfd.toJSON(this.#df));
         }
+        toastr.success("Intput data saved");
     }
 
     saveLocalStorageOutput(){
-        if(this.#selectedLocalStorageSave === "NONE" && this.NEW_DATASET_NAME === "") alert("Select or fill inn dataset to save to local storage");
+        if(this.#selectedLocalStorageSave === "NONE" && this.NEW_DATASET_NAME === "") toastr.error("Select or fill inn dataset to save to local storage");
         if(this.#selectedLocalStorageSave !== "NONE") {
             localDatastore.addOutputData(this.#selectedLocalStorageSave, dfd.toJSON(this.#df));
         } else if (this.NEW_DATASET_NAME.value !== "") {
             localDatastore.addOutputData(this.NEW_DATASET_NAME.value, dfd.toJSON(this.#df));
         }
+        toastr.success("Output data saved");
     }
 
     dropColumn(){
@@ -404,27 +406,27 @@ class DanfoEditor {
     }
 
     fillMissingData() {
-        if (this.VALUE_MISSING_DATA.value === "") alert("fill in a value");
+        if (this.VALUE_MISSING_DATA.value === "") toastr.error("Fill in a value");
        this.#df = this.#df.fillNa(this.VALUE_MISSING_DATA.value); 
        this.play();
     }
 
     fillColumnMissingData() {
-        if (this.COLUMN_VALUE_MISSING_DATA.value === "") alert("fill in a value");
-        if (this.COLUMN_MISSING_DATA.value === "") alert("fill in a column");
+        if (this.COLUMN_VALUE_MISSING_DATA.value === "") toastr.error("Fill in a value");
+        if (this.COLUMN_MISSING_DATA.value === "") toastr.error("Fill in a column");
        this.#df = this.#df.fillNa([this.COLUMN_VALUE_MISSING_DATA.value], { columns: [this.COLUMN_MISSING_DATA.value] })
        this.play();
     }
 
     dropColumn() {
-        if (this.DROP_COLUMN.value === "") alert("Fill in column name");
+        if (this.DROP_COLUMN.value === "") toastr.error("Fill in column name");
         this.#df.drop({ columns: this.DROP_COLUMN.value.split(',').map(item=>item.trim()), inplace: true });
         this.play();
     }
 
     replaceValue() {
-        if (this.REPLACE_OLD_VALUE.value === "") alert("Fill in old value");
-        if (this.REPLACE_NEW_VALUE.value === "") alert("Fill in new value");
+        if (this.REPLACE_OLD_VALUE.value === "") toastr.error("Fill in old value");
+        if (this.REPLACE_NEW_VALUE.value === "") toastr.error("Fill in new value");
         const oldValue = isNaN(this.REPLACE_OLD_VALUE.value) ? this.REPLACE_OLD_VALUE.value : Number(this.REPLACE_OLD_VALUE.value);  
         const newValue = isNaN(this.REPLACE_NEW_VALUE.value) ? this.REPLACE_NEW_VALUE.value : Number(this.REPLACE_NEW_VALUE.value);  
         if (this.REPLACE_COLUMN.value === "") {
@@ -436,9 +438,9 @@ class DanfoEditor {
     }
 
     applyScalar(){
-        if (this.#selectedArithmetic === "") alert("Select type of arithmetic to use");
-        if (this.SCALAR_COLUMN.value === "") alert("Fill in a column");
-        if (this.SCALAR_VALUE.value === "") alert("Fill in a value");
+        if (this.#selectedArithmetic === "") toastr.error("Select type of arithmetic to use");
+        if (this.SCALAR_COLUMN.value === "") toastr.error("Fill in a column");
+        if (this.SCALAR_VALUE.value === "") toastr.error("Fill in a value");
         
         const valueToUse = isNaN(this.SCALAR_VALUE.value) ? this.SCALAR_VALUE.value : Number(this.SCALAR_VALUE.value);  
         let columnAsArray = this.#df.column(this.SCALAR_COLUMN.value).values;
@@ -465,7 +467,6 @@ class DanfoEditor {
         this.#df = this.#df.addColumn(this.SCALAR_COLUMN.value, newValuesArray);
         
         this.play();
-        
     }
 }
 
