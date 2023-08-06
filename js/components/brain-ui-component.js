@@ -167,6 +167,7 @@ class BrainUIEditor {
         
         // Network
         this.SELECTED_NETWORK = shadow.querySelector("#select-network");
+        this.NETWORK_SIZE = shadow.querySelector("#network-size");
 
         shadow.querySelector("#select-network").addEventListener('change', this.selectedNetworkChange.bind(this));
         
@@ -332,6 +333,7 @@ class BrainUIEditor {
             this.#brainTrainingData = data;
             console.log(data);
 
+            console.log("Input lenght: " + data[0].input.length);
             //test brain - remove later
             
             var net = new brain.NeuralNetwork();
@@ -371,9 +373,34 @@ class BrainUIEditor {
         }
     }
 
-    initNeuralNetwork() {}
+    initNeuralNetwork() {
+        this.calculateNetworkSize();
+    }
 
-    initRecurrentNeuralNetwork() {}
+    initRecurrentNeuralNetwork() {
+        this.calculateNetworkSize();
+    }
+
+    calculateNetworkSize() {
+        if (this.NETWORK_SIZE.value !== "") return;
+
+        let s = [];
+        if (this.#brainTrainingData[0].input.length) {
+            s.push(this.#brainTrainingData[0].input.length);
+            s.push(Math.max(3, Math.floor(his.#brainTrainingData[0].input.length / 2)));
+            s.push(this.#brainTrainingData[0].output.length);
+        } else {
+            let inputLenght = 0;
+            for (var i in this.#brainTrainingData[0].input) { inputLenght++; }
+            let outputLenght = 0;
+            for (var i in this.#brainTrainingData[0].output) { outputLenght++; }
+            
+            s.push(inputLenght);
+            s.push(Math.max(3, Math.floor(inputLenght / 2)));
+            s.push(outputLenght);
+        }
+        this.NETWORK_SIZE.value = s;
+    }
 
     //************** */
     // Training
