@@ -131,7 +131,7 @@ text-align: center;
                 <input type="text" id="network-leaky-relu-alpha" placeholder="Leaky Relu Alpha">
             </label>
         </div>
-        <button id="network-render-graph">Render</button>
+        <button id="network-render-graph">Create & Render Network</button>
     </div>
     <div id="panel-training">
         <div class="grid">
@@ -194,6 +194,8 @@ class BrainUIEditor {
     #iterations;
     #errorThresh;
     #trainingProgress;
+
+    #testInputData;
     
 
     constructor(shadow) {
@@ -498,7 +500,9 @@ class BrainUIEditor {
     renderNeuralNetwork() {
         this.generateNeuralNetworkConfig();
         this.#network = new brain.NeuralNetwork(this.#networkConfig);
-        this.NETWORK_RENDER.innerHTML = brain.utilities.toSVG(this.#network, {inputs:{labels: this.#dfInput.columns}});
+        const height = this.NETWORK_RENDER.offsetHeight;
+        const width = this.NETWORK_RENDER.offsetWidth;
+        this.NETWORK_RENDER.innerHTML = brain.utilities.toSVG(this.#network, {height: height, width: width, inputs:{labels: this.#dfInput.columns}});
     }
 
     renderRecurrentNeuralNetwork() {}
@@ -639,18 +643,14 @@ class BrainUIEditor {
     }
 
     getTestInputElement(name) {
-        let el = "<label for='testing-input-" + name + "'>" + name;
-        el += "<input type='text' id='testing-input-" + name + "' placeholder='input value'></label>"
+        let el = "<label for='testing-input-" + name.toLocaleLowerCase() + "'>" + name
+        el += "<input type='text' id='testing-input-" + name.toLocaleLowerCase() + "' placeholder='input value'></label>"
         return el;
     }
 
     runTest() {
-        this.TESTING_RESULT.value = "";
-
-        const testInput = this.generateTestInput;
-        console.log("test input: " + testInput);
-
-        this.TESTING_RESULT.value = this.#network.run(testInput);
+        this.TESTING_RESULT.innerHTML = "";
+        this.TESTING_RESULT.innerHTML = JSON.stringify(this.#network.run(this.generateTestInput()));
     }
 
     generateTestInput() {
@@ -658,16 +658,14 @@ class BrainUIEditor {
 
         const inputTestColumns = this.TESTING_INPUT_COLUMNS.value.split(',');
 
-        let values = {};
+        let testInputData = {};
         for (const key in inputTestColumns) {
             if (Object.hasOwnProperty.call(inputTestColumns, key)) {
-                const element = inputTestColumns[key];
-                let el = this.#shadow.querySelector("#"+element);
-                values[element] = el.value;
+                const element = inputTestColumns[key].toLocaleLowerCase();
+                testInputData[element] = this.#shadow.querySelector('#testing-input-' + element).value;
             }
         }
-
-        return values;
+        return testInputData;
     }
 
 }
