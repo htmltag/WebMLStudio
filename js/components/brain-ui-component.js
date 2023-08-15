@@ -71,6 +71,11 @@ text-align: center;
                 <option value="CSV">CSV</option>
             </select>
             <input type="text" id="delimiter" placeholder="Delimiter for CSV (default is comma , )">
+            <label for="load-switch-only-input">
+                <br/>  
+                <input type="checkbox" id="load-switch-only-input" name="only-input" role="switch">
+                Use only input data
+            </label>
         </div>
         <hr/>
         <div class="grid">
@@ -94,6 +99,10 @@ text-align: center;
                     <button id="load-localstorage-output-btn">Output</button>
                 </div>
             </div>
+        </div>
+        <div class="grid">
+            <button id="load-straight-to-brain-btn">Load straight into Brain training data</button>
+            <button id="convert-load-to-brain-btn">Convert to Brain training data and load</button>
         </div>
     </div>
     <div id="panel-network">
@@ -184,7 +193,11 @@ class BrainUIEditor {
     #selectedLocalStorageLoad = "NONE";
     #inputLoaded = false;
     #outputLoaded = false;
+    #useOnlyInputData = false;
+    #inputDataStructureType = "NONE";
+    #outputDataStructureType = "NONE";
     #brainTrainingData;
+
 
     #selectedNetwork;
     #selectedNetworkActivation;
@@ -200,6 +213,7 @@ class BrainUIEditor {
 
     constructor(shadow) {
         this.#shadow = shadow;
+
         // Load Danfo data
         this.DANFO_OUTPUT_ELEMENT = shadow.querySelector("#danfo-output");
         this.DANFO_OUTPUTDATA = shadow.querySelector("#danfo-outputdata");
@@ -209,6 +223,8 @@ class BrainUIEditor {
         this.SELECT_LOCALSTORAGE_LOAD = shadow.querySelector("#select-localstorage-load");
         this.URL_TO_DATASET = shadow.querySelector("#url-to-dataset");
         this.DELIMITER = shadow.querySelector("#delimiter");
+        this.ONLY_INPUT = shadow.querySelector("#load-switch-only-input");
+
         
         shadow.querySelector("#empty-btn").addEventListener('click', this.empty.bind(this));
         shadow.querySelector("#file-dataset").addEventListener('change', this.loadInputFile.bind(this));
@@ -217,6 +233,9 @@ class BrainUIEditor {
         shadow.querySelector("#load-localstorage-input-btn").addEventListener('click', this.loadLocalStorageInput.bind(this));
         shadow.querySelector("#load-localstorage-output-btn").addEventListener('click', this.loadLocalStorageOutput.bind(this));
         shadow.querySelector("#select-localstorage-load").addEventListener('change', this.selectLocalStorageLoadChange.bind(this));
+        shadow.querySelector("#load-switch-only-input").addEventListener('change', this.selectOnlyInputChange.bind(this));
+        shadow.querySelector("#load-straight-to-brain-btn").addEventListener('click', this.loadStraightToBrain.bind(this));
+        shadow.querySelector("#convert-load-to-brain-btn").addEventListener('click', this.convertToBrainDataFormat.bind(this));
         
         // Network
         this.SELECTED_NETWORK = shadow.querySelector("#select-network");
@@ -303,6 +322,10 @@ class BrainUIEditor {
         this.#selectedLocalStorageLoad = this.SELECT_LOCALSTORAGE_LOAD.options[this.SELECT_LOCALSTORAGE_LOAD.selectedIndex].value;
     }
 
+    selectOnlyInputChange() {
+        this.#useOnlyInputData = this.ONLY_INPUT.checked;
+    }
+
     loadInputFile() {
         try {
             const inputfile = this.FILE_DATASET.files[0];
@@ -332,7 +355,6 @@ class BrainUIEditor {
             }
             this.#inputLoaded = true;
             toastr.success("Input data loaded");
-            this.convertToBrainDataFormat();
         } catch {
             toastr.error("Failed to load input data");
         }
@@ -387,7 +409,6 @@ class BrainUIEditor {
         if (!this.#inputLoaded) {
             this.#inputLoaded = true;
             toastr.success("Input data loaded");
-            this.convertToBrainDataFormat();
         }
     }
 
@@ -395,42 +416,129 @@ class BrainUIEditor {
         if (!this.#outputLoaded) {
             this.#outputLoaded = true;
             toastr.success("Output data loaded");
-            this.convertToBrainDataFormat();
+        }
+    }
+
+    loadStraightToBrain() {
+        if (!this.#inputLoaded && !this.#outputLoaded) toastr.error("No input or output data is loaded!");
+        if(this.#inputLoaded && this.#useOnlyInputData) {
+            try {
+                const inputJson = dfd.toJSON(this.#dfInput);
+                this.checkDataStructureType(inputJson, "input");
+
+                if(this.#inputDataStructureType !== "FAIL") {
+                    this.#brainTrainingData = inputJson;
+                    toastr.success("Data successfully loaded");
+                }
+            } catch {
+                toastr.error("Data did not load");
+            }
+            
+        }
+
+        if((this.#inputLoaded && this.#outputLoaded) && !this.#useOnlyInputData) {
+            toastr.error("Need to convert to Brain training data.");
         }
     }
 
     convertToBrainDataFormat() {
-        if ( this.#inputLoaded && this.#outputLoaded ) {
+        if (!this.#inputLoaded && !this.#outputLoaded) toastr.error("No input or output data is loaded!");
+        if ( (this.#inputLoaded && this.#outputLoaded) && this.#useOnlyInputData === true) toastr.error("Remove output data or switch off Use only input");
+        if(this.#inputLoaded && this.#useOnlyInputData) {
+            try {
+                const inputJson = dfd.toJSON(this.#dfInput);
+                this.checkDataStructureType(inputJson, "input");
+
+                if(this.#inputDataStructureType !== "FAIL") {
+                    this.#brainTrainingData = inputJson;
+                    toastr.success("Data successfully loaded");
+                }
+            } catch {
+                toastr.error("Data did not load");
+            }
+        }
+        if ( (this.#inputLoaded && this.#outputLoaded) && !this.#useOnlyInputData) {
             const inputJson = dfd.toJSON(this.#dfInput);
             const outputJson = dfd.toJSON(this.#dfOutput);
+
+            this.checkDataStructureType(inputJson, "input");
+            this.checkDataStructureType(outputJson, "output");
+
+            // if input and output is not of same type
+            if (this.#inputDataStructureType !== this.#outputDataStructureType) {
+                toastr.error("Input and output data is not of the same type");
+                return;
+            }
+
             let data = [];
             for (let i = 0; i < inputJson.length; i++) {
-                data.push({input: inputJson[i], output: outputJson[i]})
+                if (this.#inputDataStructureType === "ARRAY-OF-OBJECTS") {
+                    data.push({input: inputJson[i], output: outputJson[i]})
+                } else {
+                    data.push({input: [inputJson[i]], output: [outputJson[i]]})
+                }
             }
             this.#brainTrainingData = data;
-            console.log(data);
-
-            console.log("Input lenght: " + data[0].input.length);
-            //test brain - remove later
             
-            var net = new brain.NeuralNetwork();
+            toastr.success("Data has been converted and loaded to Brain");
+        }
+    }
 
-            net.train(data);
+    checkDataStructureType(data, inputOrOutput) {
+        // Check if data is of type array
+        if (!Array.isArray(data)) {
+            this.setDataStructureType(inputOrOutput, "FAIL");
+            toastr.error("Data is not an array");
+            return;
+        } 
+        
+        // check if it's a array and not empty, if not, then abort
+        if (Array.isArray(data) && data.length === 0) {
+            this.setDataStructureType(inputOrOutput, "FAIL");
+            toastr.error("Empty array");
+            return;
+        } 
 
-            var output = net.run({
-                Age: 0.42,
-                Gender: 1,
-                Height: 0.736,
-                Weight: 0.492
-              }); // { white: 0.99, black: 0.002 }
-              
-            console.log(output);
+        // Check what type of array it is.
 
-            
+        // Check if array of arrays
+        if (Array.isArray(data[0])) {
+            this.setDataStructureType(inputOrOutput, "ARRAY-OF-ARRAYS");
+            return;
+        }
 
-            //end test brain
-            
-            toastr.success("Starting conversion");
+        // Check if array of objects
+        if (this.isObject(data[0])) {
+            this.setDataStructureType(inputOrOutput, "ARRAY-OF-OBJECTS");
+            return;
+        }
+
+        // check if array of numbers
+        if ((typeof data[0]) === "number") {
+            this.setDataStructureType(inputOrOutput, "ARRAY-OF-NUMBERS");
+            return;
+        }
+
+        // check if array of strings
+        if ((typeof data[0]) === "string") {
+            this.setDataStructureType(inputOrOutput, "ARRAY-OF-STRINGS");
+            return;
+        }
+
+        this.setDataStructureType(inputOrOutput, "FAIL");
+        toastr.error("Something whent wrong");
+        return;
+    }
+
+    isObject(objValue) {
+        return objValue && typeof objValue === 'object' && objValue.constructor === Object;
+    }
+
+    setDataStructureType(inputOrOutput, type) {
+        if (inputOrOutput.toLocaleLowerCase() === "input") {
+            this.#inputDataStructureType = type;
+        } else {
+            this.#outputDataStructureType = type;
         }
     }
 
