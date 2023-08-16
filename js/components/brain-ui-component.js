@@ -51,6 +51,16 @@ text-align: center;
     background-color: #fff;
     min-height: 400px;
 }
+
+#file-dataset-input::before {
+    content: 'Input';
+    margin-right: 10px;
+}
+
+#file-dataset-output::before {
+    content: 'Output';
+    margin-right: 10px;
+}
 </style>
 <div>
     <nav>
@@ -71,22 +81,28 @@ text-align: center;
                 <option value="CSV">CSV</option>
             </select>
             <input type="text" id="delimiter" placeholder="Delimiter for CSV (default is comma , )">
-            <label for="load-switch-only-input">
-                <br/>  
-                <input type="checkbox" id="load-switch-only-input" name="only-input" role="switch">
-                Use only input data
-            </label>
+            <div id="raw-json-wrapper" class="hide">
+                <label for="load-switch-raw-json">
+                    <br/>  
+                    <input type="checkbox" id="load-switch-raw-json" name="only-input" role="switch">
+                    Raw JSON
+                </label>
+            </div>
         </div>
         <hr/>
         <div class="grid">
             <div>
                 <h2>From file</h2>
-                <input type="file" id="file-dataset" name="file-dataset">
+                <input type="file" id="file-dataset-input" name="file-dataset">
+                <input type="file" id="file-dataset-output" name="file-dataset">
             </div>
             <div>
                 <h2>From URL</h2>
                 <div class="grid">
-                    <input type="txt" id="url-to-dataset" placeholder="Url..."><button id="load-from-url">Load</button>
+                    <input type="txt" id="url-to-dataset-input" placeholder="Url..."><button id="load-from-url-input">Load input</button>
+                </div>
+                <div class="grid">
+                    <input type="txt" id="url-to-dataset-output" placeholder="Url..."><button id="load-from-url-output">Load output</button>
                 </div>
             </div>
             <div>
@@ -95,13 +111,19 @@ text-align: center;
                     <select id="select-localstorage-load">
                         <option value="NONE" disabled selected>Dataset to load from</option>
                     </select>
-                    <button id="load-localstorage-input-btn">Input</button>
-                    <button id="load-localstorage-output-btn">Output</button>
+                    <div>
+                        <button id="load-localstorage-input-btn">Input</button>
+                        <button id="load-localstorage-output-btn">Output</button>
+                    </div>
                 </div>
             </div>
         </div>
+        <hr/>
         <div class="grid">
-            <button id="load-straight-to-brain-btn">Load straight into Brain training data</button>
+            <label for="load-switch-only-input">  
+                <input type="checkbox" id="load-switch-only-input" name="only-input" role="switch">
+                Use only input data
+            </label>
             <button id="convert-load-to-brain-btn">Convert to Brain training data and load</button>
         </div>
     </div>
@@ -164,6 +186,7 @@ text-align: center;
             <input type="text" id="testing-columns" placeholder="Array of input columns"/>
             <button id="testing-generate-form-btn">Generate form</button>
         </div>
+        <hr/>
         <div id="testing-form-wrapper"></div>
         <div id="testing-result-wrapper">
             <button id="testing-run-btn">Run</button>
@@ -206,9 +229,8 @@ class BrainUIEditor {
 
     #iterations;
     #errorThresh;
-    #trainingProgress;
 
-    #testInputData;
+    #labels = [];
     
 
     constructor(shadow) {
@@ -218,23 +240,26 @@ class BrainUIEditor {
         this.DANFO_OUTPUT_ELEMENT = shadow.querySelector("#danfo-output");
         this.DANFO_OUTPUTDATA = shadow.querySelector("#danfo-outputdata");
         this.DANFO_INPUTDATA = shadow.querySelector("#danfo-inputdata");
-        this.FILE_DATASET = shadow.querySelector("#file-dataset");
+        this.FILE_DATASET_INPUT = shadow.querySelector("#file-dataset-input");
+        this.FILE_DATASET_OUTPUT = shadow.querySelector("#file-dataset-output");
         this.SELECT_FILETYPE_LOAD = shadow.querySelector("#select-filetype-load");
         this.SELECT_LOCALSTORAGE_LOAD = shadow.querySelector("#select-localstorage-load");
         this.URL_TO_DATASET = shadow.querySelector("#url-to-dataset");
         this.DELIMITER = shadow.querySelector("#delimiter");
         this.ONLY_INPUT = shadow.querySelector("#load-switch-only-input");
+        this.RAW_JSON_WRAPPER = shadow.querySelector("#raw-json-wrapper");
 
         
         shadow.querySelector("#empty-btn").addEventListener('click', this.empty.bind(this));
-        shadow.querySelector("#file-dataset").addEventListener('change', this.loadInputFile.bind(this));
+        shadow.querySelector("#file-dataset-input").addEventListener('change', this.loadInputFile.bind(this));
+        shadow.querySelector("#file-dataset-output").addEventListener('change', this.loadOutputFile.bind(this));
         shadow.querySelector("#select-filetype-load").addEventListener('change', this.selectFiletypeLoadChange.bind(this));
-        shadow.querySelector("#load-from-url").addEventListener('click', this.loadFromURL.bind(this));
+        shadow.querySelector("#load-from-url-input").addEventListener('click', this.loadFromURL.bind(this));
+        shadow.querySelector("#load-from-url-output").addEventListener('click', this.loadFromURL.bind(this));
         shadow.querySelector("#load-localstorage-input-btn").addEventListener('click', this.loadLocalStorageInput.bind(this));
         shadow.querySelector("#load-localstorage-output-btn").addEventListener('click', this.loadLocalStorageOutput.bind(this));
         shadow.querySelector("#select-localstorage-load").addEventListener('change', this.selectLocalStorageLoadChange.bind(this));
         shadow.querySelector("#load-switch-only-input").addEventListener('change', this.selectOnlyInputChange.bind(this));
-        shadow.querySelector("#load-straight-to-brain-btn").addEventListener('click', this.loadStraightToBrain.bind(this));
         shadow.querySelector("#convert-load-to-brain-btn").addEventListener('click', this.convertToBrainDataFormat.bind(this));
         
         // Network
@@ -316,6 +341,13 @@ class BrainUIEditor {
 
     selectFiletypeLoadChange() {
         this.#selectedFiletypeLoad = this.SELECT_FILETYPE_LOAD.options[this.SELECT_FILETYPE_LOAD.selectedIndex].value;
+        if(this.#selectedFiletypeLoad === "JSON") {
+            this.RAW_JSON_WRAPPER.classList.add("show");
+            this.RAW_JSON_WRAPPER.classList.remove("hide");
+        } else {
+            this.RAW_JSON_WRAPPER.classList.add("hide");
+            this.RAW_JSON_WRAPPER.classList.remove("show");
+        }
     }
 
     selectLocalStorageLoadChange() {
@@ -327,8 +359,16 @@ class BrainUIEditor {
     }
 
     loadInputFile() {
+        this.loadFile("input");
+    }
+
+    loadOutputFile() {
+        this.loadFile("output");
+    }
+
+    loadFile(inputOrOutput) {
         try {
-            const inputfile = this.FILE_DATASET.files[0];
+            const inputfile = inputOrOutput.toLocaleLowerCase() === "input" ? this.FILE_DATASET_INPUT.files[0] : this.FILE_DATASET_OUTPUT.files[0];
             const delimiter = this.DELIMITER.value ? this.DELIMITER.value : ",";
             switch (this.#selectedFiletypeLoad) {
                 case 'NONE':
@@ -336,27 +376,44 @@ class BrainUIEditor {
                     break;
                 case 'JSON':
                     dfd.readJSON(inputfile).then((df) => {
-                        this.#dfInput = df;
+                        if (inputOrOutput.toLocaleLowerCase() === "input") {
+                            this.#dfInput = df;
+                        } else {
+                            this.#dfOutput = df;
+                        }
                         this.play();
                     });
                     break;
                 case 'EXCEL':
                     dfd.readExcel(inputfile).then((df) => {
-                        this.#dfInput = df;
+                        if (inputOrOutput.toLocaleLowerCase() === "input") {
+                            this.#dfInput = df;
+                        } else {
+                            this.#dfOutput = df;
+                        }
                         this.play();
                     })
                     break;
                 case 'CSV':
                     dfd.readCSV(inputfile, {delimeter: delimiter}).then((df) => {
-                        this.#dfInput = df;
+                        if (inputOrOutput.toLocaleLowerCase() === "input") {
+                            this.#dfInput = df;
+                        } else {
+                            this.#dfOutput = df;
+                        }
                         this.play();
                     });
                     break;
             }
-            this.#inputLoaded = true;
-            toastr.success("Input data loaded");
+            if (inputOrOutput.toLocaleLowerCase() === "input") {
+                this.#inputLoaded = true;
+                toastr.success("Input data loaded");
+            } else {
+                this.#outputLoaded = true;
+                toastr.success("Input data loaded");
+            }
         } catch {
-            toastr.error("Failed to load input data");
+            toastr.error("Failed to load file");
         }
     }
 
@@ -416,28 +473,6 @@ class BrainUIEditor {
         if (!this.#outputLoaded) {
             this.#outputLoaded = true;
             toastr.success("Output data loaded");
-        }
-    }
-
-    loadStraightToBrain() {
-        if (!this.#inputLoaded && !this.#outputLoaded) toastr.error("No input or output data is loaded!");
-        if(this.#inputLoaded && this.#useOnlyInputData) {
-            try {
-                const inputJson = dfd.toJSON(this.#dfInput);
-                this.checkDataStructureType(inputJson, "input");
-
-                if(this.#inputDataStructureType !== "FAIL") {
-                    this.#brainTrainingData = inputJson;
-                    toastr.success("Data successfully loaded");
-                }
-            } catch {
-                toastr.error("Data did not load");
-            }
-            
-        }
-
-        if((this.#inputLoaded && this.#outputLoaded) && !this.#useOnlyInputData) {
-            toastr.error("Need to convert to Brain training data.");
         }
     }
 
@@ -507,12 +542,6 @@ class BrainUIEditor {
             return;
         }
 
-        // Check if array of objects
-        if (this.isObject(data[0])) {
-            this.setDataStructureType(inputOrOutput, "ARRAY-OF-OBJECTS");
-            return;
-        }
-
         // check if array of numbers
         if ((typeof data[0]) === "number") {
             this.setDataStructureType(inputOrOutput, "ARRAY-OF-NUMBERS");
@@ -522,6 +551,12 @@ class BrainUIEditor {
         // check if array of strings
         if ((typeof data[0]) === "string") {
             this.setDataStructureType(inputOrOutput, "ARRAY-OF-STRINGS");
+            return;
+        }
+
+        // Check if array of objects
+        if (this.isObject(data[0])) {
+            this.setDataStructureType(inputOrOutput, "ARRAY-OF-OBJECTS");
             return;
         }
 
@@ -577,15 +612,29 @@ class BrainUIEditor {
         if (this.NETWORK_SIZE.value !== "") return;
 
         let s = [];
-        if (this.#brainTrainingData[0].input.length) {
+        if (this.#brainTrainingData[0]?.input?.length) {
             s.push(this.#brainTrainingData[0].input.length);
-            s.push(Math.max(3, Math.floor(his.#brainTrainingData[0].input.length / 2)));
-            s.push(this.#brainTrainingData[0].output.length);
+            s.push(Math.max(3, Math.floor(this.#brainTrainingData[0].input.length / 2)));
+            s.push( this.#useOnlyInputData ? 1 : this.#brainTrainingData[0].output.length);
         } else {
             let inputLenght = 0;
-            for (var i in this.#brainTrainingData[0].input) { inputLenght++; }
+            if (this.#brainTrainingData[0]?.input) {
+                for (var i in this.#brainTrainingData[0].input) { inputLenght++; }
+            } else if (this.#inputDataStructureType === "ARRAY-OF-STRINGS"){
+                inputLenght = 1;
+            } else {
+                for (var i in this.#brainTrainingData[0]) { inputLenght++; }
+            }
+            
             let outputLenght = 0;
-            for (var i in this.#brainTrainingData[0].output) { outputLenght++; }
+            if (this.#useOnlyInputData) {
+                outputLenght = 1;
+            } else if (this.#brainTrainingData[0].output) {
+                for (var i in this.#brainTrainingData[0].output) { outputLenght++; }
+            } else {
+                for (var i in this.#brainTrainingData[0]) { outputLenght++; }
+            }
+            
             
             s.push(inputLenght);
             s.push(Math.max(3, Math.floor(inputLenght / 2)));
@@ -610,10 +659,29 @@ class BrainUIEditor {
         this.#network = new brain.NeuralNetwork(this.#networkConfig);
         const height = this.NETWORK_RENDER.offsetHeight;
         const width = this.NETWORK_RENDER.offsetWidth;
-        this.NETWORK_RENDER.innerHTML = brain.utilities.toSVG(this.#network, {height: height, width: width, inputs:{labels: this.#dfInput.columns}});
+        this.NETWORK_RENDER.innerHTML = brain.utilities.toSVG(this.#network, {height: height, width: width, inputs:{labels: this.getLabels()}});
     }
 
     renderRecurrentNeuralNetwork() {}
+
+    getLabels() {
+        console.log("Labels cols: " + this.#dfInput.columns);
+        if (this.#dfInput.columns) {
+            if (this.#dfInput.columns[0] === "input" || this.#dfInput.columns[0].input) {
+                console.log("yeah");
+                let labels = [];
+                let counter = 0;
+                for (let i in this.#dfInput.columns) {labels.push("input-" + counter++)}
+                this.#labels = labels;
+                return labels;
+            } else {
+                this.#labels = this.#dfInput.columns; 
+                return this.#dfInput.columns;
+            }
+        } else {
+            return [];
+        }
+    }
 
     generateNeuralNetworkConfig() {
         if (this.NETWORK_SIZE.value === "") this.calculateNetworkSize();
@@ -729,9 +797,7 @@ class BrainUIEditor {
 
 
     initTesting() {
-        if (this.#dfInput.columns.length > 0) {
-            this.TESTING_INPUT_COLUMNS.value = this.#dfInput.columns;
-        }
+        this.TESTING_INPUT_COLUMNS.value = this.#labels;
     }
     
     generateTestingForm() {
