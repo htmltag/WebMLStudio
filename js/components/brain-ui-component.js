@@ -61,6 +61,19 @@ text-align: center;
     content: 'Output';
     margin-right: 10px;
 }
+
+.load-from-options {
+	border: none;
+	display: flex;
+	flex-direction: row;
+	justify-content: flex-start;
+	break-before: always;
+	margin: 0 0 3em 0;
+}
+
+.floatBlock {
+    margin: 0 1.81em 0 0;
+  }
 </style>
 <div>
     <nav>
@@ -80,7 +93,6 @@ text-align: center;
                 <option value="EXCEL">Excel</option>
                 <option value="CSV">CSV</option>
             </select>
-            <input type="text" id="delimiter" placeholder="Delimiter for CSV (default is comma , )">
             <div id="raw-json-wrapper" class="hide">
                 <label for="load-switch-raw-json">
                     <br/>  
@@ -88,33 +100,47 @@ text-align: center;
                     Raw JSON
                 </label>
             </div>
+            <input type="text" id="delimiter" class="hide" placeholder="Delimiter for CSV (default is comma , )">
         </div>
         <hr/>
-        <div class="grid">
-            <div>
-                <h2>From file</h2>
-                <input type="file" id="file-dataset-input" name="file-dataset">
-                <input type="file" id="file-dataset-output" name="file-dataset">
+        <div>
+            <div class="load-from-options"> <span class="floatBlock">Load from:</span> 
+                <label for="radio-load-from-file" class="floatBlock">
+                    <input type="radio" id="radio-load-from-file" name="radio-load-from" value="File" checked>
+                    File
+                </label>
+                <label for="radio-load-from-url" class="floatBlock">
+                    <input type="radio" id="radio-load-from-url" name="radio-load-from" value="Url">
+                    Url
+                </label>
+                <label for="large" class="floatBlock">
+                    <input type="radio" id="radio-load-from-local-storage" name="radio-load-from" value="local-storage">
+                    Local storage
+                </label>
             </div>
-            <div>
-                <h2>From URL</h2>
+            <div id="from-file">
                 <div class="grid">
-                    <input type="txt" id="url-to-dataset-input" placeholder="Url..."><button id="load-from-url-input">Load input</button>
-                </div>
-                <div class="grid">
-                    <input type="txt" id="url-to-dataset-output" placeholder="Url..."><button id="load-from-url-output">Load output</button>
+                    <input type="file" id="file-dataset-input" name="file-dataset">
+                    <input type="file" id="file-dataset-output" name="file-dataset">
                 </div>
             </div>
-            <div>
-                <h2>Local storage</h2>
+            <div id="from-url">
+                <div class="grid">
+                    <div class="grid">
+                        <input type="txt" id="url-to-dataset-input" placeholder="Url..."><button id="load-from-url-input">Load input</button>
+                    </div>
+                    <div class="grid">
+                        <input type="txt" id="url-to-dataset-output" placeholder="Url..."><button id="load-from-url-output">Load output</button>
+                    </div>
+                </div>
+            </div>
+            <div id="from-local-storage">
                 <div class="grid">
                     <select id="select-localstorage-load">
                         <option value="NONE" disabled selected>Dataset to load from</option>
                     </select>
-                    <div>
-                        <button id="load-localstorage-input-btn">Input</button>
-                        <button id="load-localstorage-output-btn">Output</button>
-                    </div>
+                    <button id="load-localstorage-input-btn">Input</button>
+                    <button id="load-localstorage-output-btn">Output</button>
                 </div>
             </div>
         </div>
@@ -214,6 +240,7 @@ class BrainUIEditor {
     #datastores;
     #selectedFiletypeLoad = "NONE";
     #selectedLocalStorageLoad = "NONE";
+    #radioLoadFrom = "FILE";
     #inputLoaded = false;
     #outputLoaded = false;
     #useOnlyInputData = false;
@@ -244,18 +271,25 @@ class BrainUIEditor {
         this.FILE_DATASET_OUTPUT = shadow.querySelector("#file-dataset-output");
         this.SELECT_FILETYPE_LOAD = shadow.querySelector("#select-filetype-load");
         this.SELECT_LOCALSTORAGE_LOAD = shadow.querySelector("#select-localstorage-load");
-        this.URL_TO_DATASET = shadow.querySelector("#url-to-dataset");
+        this.URL_TO_DATASET_INPUT = shadow.querySelector("#url-to-dataset-input");
+        this.URL_TO_DATASET_OUTPUT = shadow.querySelector("#url-to-dataset-output");
         this.DELIMITER = shadow.querySelector("#delimiter");
         this.ONLY_INPUT = shadow.querySelector("#load-switch-only-input");
         this.RAW_JSON_WRAPPER = shadow.querySelector("#raw-json-wrapper");
-
+        this.RADIO_LOAD_FROM = shadow.querySelectorAll("input[name='radio-load-from']");
+        this.FROM_LOCAL_STORAGE = shadow.querySelector("#from-local-storage");
+        this.FROM_FILE = shadow.querySelector("#from-file");
+        this.FROM_URL = shadow.querySelector("#from-url");
         
         shadow.querySelector("#empty-btn").addEventListener('click', this.empty.bind(this));
+        shadow.querySelector("#radio-load-from-local-storage").addEventListener('change', this.radioLoadFromChange.bind(this));
+        shadow.querySelector("#radio-load-from-file").addEventListener('change', this.radioLoadFromChange.bind(this));
+        shadow.querySelector("#radio-load-from-url").addEventListener('change', this.radioLoadFromChange.bind(this));
         shadow.querySelector("#file-dataset-input").addEventListener('change', this.loadInputFile.bind(this));
         shadow.querySelector("#file-dataset-output").addEventListener('change', this.loadOutputFile.bind(this));
         shadow.querySelector("#select-filetype-load").addEventListener('change', this.selectFiletypeLoadChange.bind(this));
-        shadow.querySelector("#load-from-url-input").addEventListener('click', this.loadFromURL.bind(this));
-        shadow.querySelector("#load-from-url-output").addEventListener('click', this.loadFromURL.bind(this));
+        shadow.querySelector("#load-from-url-input").addEventListener('click', this.loadInputFromURL.bind(this));
+        shadow.querySelector("#load-from-url-output").addEventListener('click', this.loadOutputFromURL.bind(this));
         shadow.querySelector("#load-localstorage-input-btn").addEventListener('click', this.loadLocalStorageInput.bind(this));
         shadow.querySelector("#load-localstorage-output-btn").addEventListener('click', this.loadLocalStorageOutput.bind(this));
         shadow.querySelector("#select-localstorage-load").addEventListener('change', this.selectLocalStorageLoadChange.bind(this));
@@ -297,7 +331,9 @@ class BrainUIEditor {
     }
 
     init() {
-         this.loadDatastoreNames();
+        this.loadDatastoreNames();
+        this.hideAllLoadFrom();
+        this.FROM_FILE.classList.add("show");
     }
 
     loadDatastoreNames() {
@@ -344,9 +380,21 @@ class BrainUIEditor {
         if(this.#selectedFiletypeLoad === "JSON") {
             this.RAW_JSON_WRAPPER.classList.add("show");
             this.RAW_JSON_WRAPPER.classList.remove("hide");
+
+            this.DELIMITER.classList.remove("show");
+            this.DELIMITER.classList.add("hide")
+        } else if (this.#selectedFiletypeLoad === "CSV"){
+            this.DELIMITER.classList.remove("hide");
+            this.DELIMITER.classList.add("show")
+
+            this.RAW_JSON_WRAPPER.classList.add("hide");
+            this.RAW_JSON_WRAPPER.classList.remove("show");
         } else {
             this.RAW_JSON_WRAPPER.classList.add("hide");
             this.RAW_JSON_WRAPPER.classList.remove("show");
+
+            this.DELIMITER.classList.remove("show");
+            this.DELIMITER.classList.add("hide")
         }
     }
 
@@ -356,6 +404,37 @@ class BrainUIEditor {
 
     selectOnlyInputChange() {
         this.#useOnlyInputData = this.ONLY_INPUT.checked;
+    }
+
+    radioLoadFromChange() {
+        for (const radioButton of this.RADIO_LOAD_FROM) {
+            if (radioButton.checked) {
+                this.#radioLoadFrom = radioButton.value;
+                break;
+            }
+        }
+
+        if (this.#radioLoadFrom === "File") {
+            this.hideAllLoadFrom();
+            this.FROM_FILE.classList.add("show");
+        } else if (this.#radioLoadFrom === "Url") {
+            this.hideAllLoadFrom();
+            this.FROM_URL.classList.add("show");
+        } else {
+            this.hideAllLoadFrom();
+            this.FROM_LOCAL_STORAGE.classList.add("show");
+        }
+    }
+
+    hideAllLoadFrom() {
+        this.FROM_LOCAL_STORAGE.classList.remove("show");
+        this.FROM_LOCAL_STORAGE.classList.add("hide");
+
+        this.FROM_FILE.classList.remove("show");
+        this.FROM_FILE.classList.add("hide");
+
+        this.FROM_URL.classList.remove("show");
+        this.FROM_URL.classList.add("hide");
     }
 
     loadInputFile() {
@@ -417,9 +496,17 @@ class BrainUIEditor {
         }
     }
 
-    loadFromURL() {
+    loadInputFromURL(){
+        this.loadFromURL("input");
+    }
+
+    loadOutputFromURL(){
+        this.loadFromURL("output");
+    }
+
+    loadFromURL(inputOrOutput) {
         try {
-            const url = this.URL_TO_DATASET.value;
+            const url = inputOrOutput.toLocaleLowerCase === "input" ? this.URL_TO_DATASET_INPUT.value : this.URL_TO_DATASET_OUTPUT.value;
             const delimiter = this.DELIMITER.value ? this.DELIMITER.value : ",";
 
             switch (this.#selectedFiletypeLoad) {
@@ -428,22 +515,41 @@ class BrainUIEditor {
                     break;
                 case 'JSON':
                     dfd.readJSON(url).then((df) => {
-                        this.#dfOutput = df;
+                        if (inputOrOutput.toLocaleLowerCase() === "input") {
+                            this.#dfInput = df;
+                        } else {
+                            this.#dfOutput = df;
+                        }
                         this.play();
                     });
                     break;
                 case 'EXCEL':
                     dfd.readExcel(url).then((df) => {
-                        this.#dfOutput = df;
+                        if (inputOrOutput.toLocaleLowerCase() === "input") {
+                            this.#dfInput = df;
+                        } else {
+                            this.#dfOutput = df;
+                        }
                         this.play();
                     });
                     break;
                 case 'CSV':
                     dfd.readCSV(url, {delimeter: delimiter}).then((df) => {
-                        this.#dfOutput = df;
+                        if (inputOrOutput.toLocaleLowerCase() === "input") {
+                            this.#dfInput = df;
+                        } else {
+                            this.#dfOutput = df;
+                        }
                         this.play();
                     });
                     break;
+            }
+            if (inputOrOutput.toLocaleLowerCase() === "input") {
+                this.#inputLoaded = true;
+                toastr.success("Input data loaded");
+            } else {
+                this.#outputLoaded = true;
+                toastr.success("Input data loaded");
             }
         } catch {
             toastr.error("Failed to load output data");
