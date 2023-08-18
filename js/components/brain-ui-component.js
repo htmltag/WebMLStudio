@@ -78,10 +78,11 @@ text-align: center;
 <div>
     <nav>
         <ul>
-            <li><a href="#" role="button" id="load-btn">Load</a></li>
+            <li><a href="#" role="button" id="load-btn">Load Training Data</a></li>
             <li><a href="#" role="button" id="network-btn">Network</a></li>
             <li><a href="#" role="button" id="training-btn">Training</a></li>
             <li><a href="#" role="button" id="testing-btn">Testing</a></li>
+            <li><a href="#" role="button" id="export-btn">Export</a></li>
             <li><a href="#" role="button" id="empty-btn" class="warning"><i class="fa-solid fa-trash-can"></i></a></li>
         </ul>
     </nav>
@@ -150,7 +151,7 @@ text-align: center;
                 <input type="checkbox" id="load-switch-only-input" name="only-input" role="switch">
                 Use only input data
             </label>
-            <button id="convert-load-to-brain-btn">Convert to Brain training data and load</button>
+            <button id="convert-load-to-brain-btn">Load data to Brain training data</button>
         </div>
     </div>
     <div id="panel-network">
@@ -159,8 +160,16 @@ text-align: center;
                 Network type
             <select id="select-network">
                 <option value="NONE" disabled selected>Select network</option>
-                <option value="NEURALNETWORK">Neural Network</option>
-                <option value="RECURRENTNEURALNETWORK">Recurrent Neural Network</option>
+                <option value="NEURALNETWORK">Feedforward Neural Network</option>
+                <option value="NEURALNETWORKGPU">Feedforward Neural Network GPU</option>
+                <option value="RECURRENTNEURALNETWORK-RNN-TIME-STEP">Time Step Recurrent Neural Network (RNN)</option>
+                <option value="RECURRENTNEURALNETWORK-LSTM-TIME-STEP">Time Step Long Short Term Memory Neural Network (LSTM)</option>
+                <option value="RECURRENTNEURALNETWORK-GRU-TIME-STEP">Time Step Gated Recurrent Unit (GRU)</option>
+                <option value="RECURRENTNEURALNETWORK-RNN">Recurrent Neural Network (RNN)</option>
+                <option value="RECURRENTNEURALNETWORK-LSTM">Long Short Term Memory Neural Network (LSTM)</option>
+                <option value="RECURRENTNEURALNETWORK-GRU">Gated Recurrent Unit (GRU)</option>
+                <option value="NEURALNETWORK-FEED-FORWARD">Highly Customizable Feedforward Neural Network</option>
+                <option value="RECURRENTNEURALNETWORK">Highly Customizable Recurrent Neural Network</option>
             </select>
             </label>
             <label for="network-size">
@@ -168,25 +177,57 @@ text-align: center;
                 <input type="text" id="network-size" placeholder="Array of ints">
             </label>
         </div>
-        <div id="network-nn-fields" class="grid">
-            <label for="network-binarythresh">
-                Binary Thresh
-                <input type="text" id="network-binarythresh" placeholder="binaryThresh">
-            </label>
-            <label for="select-activation">
-                Activation
-                <select id="select-activation">
-                    <option value="NONE" disabled selected>Select Activation</option>
-                    <option value="SIGMOID">Sigmoid</option>
-                    <option value="RELU">Relu</option>
-                    <option value="LEAKYRELU">Leaky-relu</option>
-                    <option value="TANH">tanh</option>
-                </select>
-            </label>
-            <label for="network-leaky-relu-alpha">
-                Leaky Relu Alpha
-                <input type="text" id="network-leaky-relu-alpha" placeholder="Leaky Relu Alpha">
-            </label>
+        <div id="network-nn-fields" class="hide">
+            <span class="grid">
+                <label for="network-binarythresh">
+                    Binary Thresh
+                    <input type="text" id="network-binarythresh" placeholder="BinaryThresh">
+                </label>
+                <label for="select-activation">
+                    Activation
+                    <select id="select-activation">
+                        <option value="NONE" disabled selected>Select Activation</option>
+                        <option value="SIGMOID">Sigmoid</option>
+                        <option value="RELU">Relu</option>
+                        <option value="LEAKYRELU">Leaky-relu</option>
+                        <option value="TANH">tanh</option>
+                    </select>
+                </label>
+                <label for="network-leaky-relu-alpha">
+                    Leaky Relu Alpha
+                    <input type="text" id="network-leaky-relu-alpha" placeholder="Leaky Relu Alpha">
+                </label>
+            </span>
+        </div>
+        <div id="network-rnn-fields" class="hide">
+            <span class="grid">
+                <label for="network-learningrate">
+                    Learning Rate
+                    <input type="text" id="network-learningrate" placeholder="Learning rate">
+                </label>
+                <label for="network-decayrate">
+                    Decay Rate
+                    <input type="text" id="network-decayrate" placeholder="Decay rate">
+                </label>
+                <label for="network-max-prediction-length">
+                    Max Prediction Length
+                    <input type="text" id="network-max-prediction-length" placeholder="Max Prediction Length">
+                </label>
+            </span>
+            <span class="grid">
+                <label for="network-regc">
+                    Regc
+                    <input type="text" id="network-regc" placeholder="Regc">
+                </label>
+                <label for="network-clipval">
+                    Clipval
+                    <input type="text" id="network-clipval" placeholder="Clipval">
+                </label>
+                <label for="network-smooth-eps">
+                    Smooth Eps
+                    <input type="text" id="network-smooth-eps" placeholder="Smooth Eps">
+                </label>
+            </span>
         </div>
         <button id="network-render-graph">Create & Render Network</button>
     </div>
@@ -219,6 +260,18 @@ text-align: center;
             <span id="testing-result"></span> 
         </div>
     </div>
+    <div id="panel-export">
+        <p id="export-nothing-to-export">
+            You need to successfully train a model to be able to export it.
+        </p>
+        <div id="export-ready-to-export">
+            You can export your sucessfully trained brain js model.<br/>
+            <div class="grid">
+                <input type="text" placeholder="Name your model" id="export-model-name">
+                <button id="export-download-model-btn">Download</button>
+            </div>    
+        </div>
+    </div>
 
     <div id="danfo-output">
         <div id="danfo-inputdata"></div>
@@ -244,6 +297,7 @@ class BrainUIEditor {
     #inputLoaded = false;
     #outputLoaded = false;
     #useOnlyInputData = false;
+    #useRawJSON = false;
     #inputDataStructureType = "NONE";
     #outputDataStructureType = "NONE";
     #brainTrainingData;
@@ -258,6 +312,8 @@ class BrainUIEditor {
     #errorThresh;
 
     #labels = [];
+
+    #trainedSuccessfully = false;
     
 
     constructor(shadow) {
@@ -276,6 +332,7 @@ class BrainUIEditor {
         this.DELIMITER = shadow.querySelector("#delimiter");
         this.ONLY_INPUT = shadow.querySelector("#load-switch-only-input");
         this.RAW_JSON_WRAPPER = shadow.querySelector("#raw-json-wrapper");
+        this.RAW_JSON_SWITCH = shadow.querySelector("#load-switch-raw-json");
         this.RADIO_LOAD_FROM = shadow.querySelectorAll("input[name='radio-load-from']");
         this.FROM_LOCAL_STORAGE = shadow.querySelector("#from-local-storage");
         this.FROM_FILE = shadow.querySelector("#from-file");
@@ -294,14 +351,23 @@ class BrainUIEditor {
         shadow.querySelector("#load-localstorage-output-btn").addEventListener('click', this.loadLocalStorageOutput.bind(this));
         shadow.querySelector("#select-localstorage-load").addEventListener('change', this.selectLocalStorageLoadChange.bind(this));
         shadow.querySelector("#load-switch-only-input").addEventListener('change', this.selectOnlyInputChange.bind(this));
+        shadow.querySelector("#load-switch-raw-json").addEventListener('change', this.rawJsonChange.bind(this));
         shadow.querySelector("#convert-load-to-brain-btn").addEventListener('click', this.convertToBrainDataFormat.bind(this));
         
         // Network
+        this.NETWORK_NN_FIELDS = shadow.querySelector("#network-nn-fields");
+        this.NETWORK_RNN_FIELDS = shadow.querySelector("#network-rnn-fields");
         this.SELECTED_NETWORK = shadow.querySelector("#select-network");
         this.NETWORK_SIZE = shadow.querySelector("#network-size");
         this.NETWORK_BINARYTHRESH = shadow.querySelector("#network-binarythresh");
         this.SELECTED_NETWORK_ACTIVATION = shadow.querySelector("#select-activation");
         this.NETWORK_LEAKY_RELU_ALPHA = shadow.querySelector("#network-leaky-relu-alpha");
+        this.NETWORK_LEARNING_RATE = shadow.querySelector("#network-learningrate");
+        this.NETWORK_DECAY_RATE = shadow.querySelector("#network-decayrate");
+        this.NETWORK_MAX_PREDICTION_LENGTH = shadow.querySelector("#network-max-prediction-length");
+        this.NETWORK_REGC = shadow.querySelector("#network-regc");
+        this.NETWORK_CLIPVAL = shadow.querySelector("#network-clipval");
+        this.NETWORK_SMOOTH_EPS = shadow.querySelector("#network-smooth-eps");
         this.NETWORK_RENDER = shadow.querySelector("#network-render");
 
         shadow.querySelector("#select-network").addEventListener('change', this.selectedNetworkChange.bind(this));
@@ -326,7 +392,16 @@ class BrainUIEditor {
         shadow.querySelector("#testing-btn").addEventListener('click', this.initTesting.bind(this));
         shadow.querySelector("#testing-generate-form-btn").addEventListener('click', this.generateTestingForm.bind(this));
         shadow.querySelector("#testing-run-btn").addEventListener('click', this.runTest.bind(this));
+
+        //export
+        this.EXPORT_NOTHING_TO_EXPORT = shadow.querySelector("#export-nothing-to-export");
+        this.EXPORT_READY_TO_EXPORT = shadow.querySelector("#export-ready-to-export");
+        this.EXPORT_MODEL_NAME = shadow.querySelector("#export-model-name");
+
+        shadow.querySelector("#export-btn").addEventListener('click', this.initExport.bind(this));
+        shadow.querySelector("#export-download-model-btn").addEventListener('click', this.downloadBrainModel.bind(this));
         
+        //main init
         this.init();
     }
 
@@ -371,6 +446,14 @@ class BrainUIEditor {
         
     }
 
+    playRawJSON(inputOrOutput) {
+        if (inputOrOutput.toLocaleLowerCase() === "input") {
+            this.DANFO_INPUTDATA.innerHTML = "<p style='color:black'>" + JSON.stringify(this.#dfInput) + "</p>";
+        } else {
+            this.DANFO_OUTPUTDATA.innerHTML = "<p style='color:black'>" + JSON.stringify(this.#dfOutput) + "</p>";
+        }
+    }
+
     //************** */
     // Load Danfo
     //************** */
@@ -404,6 +487,10 @@ class BrainUIEditor {
 
     selectOnlyInputChange() {
         this.#useOnlyInputData = this.ONLY_INPUT.checked;
+    }
+
+    rawJsonChange() {
+        this.#useRawJSON = this.RAW_JSON_SWITCH.checked;
     }
 
     radioLoadFromChange() {
@@ -454,14 +541,28 @@ class BrainUIEditor {
                     toastr.error("Please select filetype");
                     break;
                 case 'JSON':
-                    dfd.readJSON(inputfile).then((df) => {
-                        if (inputOrOutput.toLocaleLowerCase() === "input") {
-                            this.#dfInput = df;
-                        } else {
-                            this.#dfOutput = df;
+                    if (this.#useRawJSON) {
+                        let reader = new FileReader();
+                        reader.readAsText(inputfile);
+                        reader.onload = () => {
+                            if (inputOrOutput.toLocaleLowerCase() === "input") {
+                                this.#dfInput = JSON.parse(reader.result);
+                                this.playRawJSON(inputOrOutput);
+                            } else {
+                                this.#dfOutput = JSON.parse(reader.result);
+                                this.playRawJSON(inputOrOutput);
+                            }
                         }
-                        this.play();
-                    });
+                    } else {
+                        dfd.readJSON(inputfile).then((df) => {
+                            if (inputOrOutput.toLocaleLowerCase() === "input") {
+                                this.#dfInput = df;
+                            } else {
+                                this.#dfOutput = df;
+                            }
+                            this.play();
+                        });
+                    }
                     break;
                 case 'EXCEL':
                     dfd.readExcel(inputfile).then((df) => {
@@ -587,7 +688,7 @@ class BrainUIEditor {
         if ( (this.#inputLoaded && this.#outputLoaded) && this.#useOnlyInputData === true) toastr.error("Remove output data or switch off Use only input");
         if(this.#inputLoaded && this.#useOnlyInputData) {
             try {
-                const inputJson = dfd.toJSON(this.#dfInput);
+                const inputJson = this.#useRawJSON ? this.#dfInput : dfd.toJSON(this.#dfInput);
                 this.checkDataStructureType(inputJson, "input");
 
                 if(this.#inputDataStructureType !== "FAIL") {
@@ -599,8 +700,8 @@ class BrainUIEditor {
             }
         }
         if ( (this.#inputLoaded && this.#outputLoaded) && !this.#useOnlyInputData) {
-            const inputJson = dfd.toJSON(this.#dfInput);
-            const outputJson = dfd.toJSON(this.#dfOutput);
+            const inputJson = this.#useRawJSON ? this.#dfInput : dfd.toJSON(this.#dfInput);
+            const outputJson = this.#useRawJSON ? this.#dfOutput : dfd.toJSON(this.#dfOutput);
 
             this.checkDataStructureType(inputJson, "input");
             this.checkDataStructureType(outputJson, "output");
@@ -689,13 +790,10 @@ class BrainUIEditor {
     selectedNetworkChange(){
         this.#selectedNetwork = this.SELECTED_NETWORK.options[this.SELECTED_NETWORK.selectedIndex].value;
 
-        switch (this.#selectedNetwork) {
-            case "NEURALNETWORK":
-                this.initNeuralNetwork();
-                break;
-            case "RECURRENTNEURALNETWORK":
-                this.initRecurrentNeuralNetwork();
-                break;
+        if (this.#selectedNetwork.startsWith("NEURALNETWORK")) {
+            this.initNeuralNetwork();
+        } else {
+            this.initRecurrentNeuralNetwork();
         }
     }
 
@@ -705,13 +803,27 @@ class BrainUIEditor {
 
     //Initialize neural network with default values
     initNeuralNetwork() {
+        this.NETWORK_NN_FIELDS.classList.remove("hide");
+        this.NETWORK_NN_FIELDS.classList.add("show");
+        this.NETWORK_RNN_FIELDS.classList.remove("show");
+        this.NETWORK_RNN_FIELDS.classList.add("hide");
         this.calculateNetworkSize();
         this.NETWORK_BINARYTHRESH.value = 0.5;
-
+        this.NETWORK_LEAKY_RELU_ALPHA.value = 0.01;
     }
 
     initRecurrentNeuralNetwork() {
+        this.NETWORK_RNN_FIELDS.classList.remove("hide");
+        this.NETWORK_RNN_FIELDS.classList.add("show");
+        this.NETWORK_NN_FIELDS.classList.remove("show");
+        this.NETWORK_NN_FIELDS.classList.add("hide");
         this.calculateNetworkSize();
+        this.NETWORK_LEARNING_RATE.value = 0.01;
+        this.NETWORK_DECAY_RATE.value = 0.999;
+        this.NETWORK_MAX_PREDICTION_LENGTH.value = 100;
+        this.NETWORK_REGC.value = 0.000001;
+        this.NETWORK_CLIPVAL.value = 5;
+        this.NETWORK_SMOOTH_EPS.value = 1e-8;
     }
 
     calculateNetworkSize() {
@@ -750,31 +862,74 @@ class BrainUIEditor {
     }
 
     renderNetworkGraph() {
-        switch (this.#selectedNetwork) {
-            case "NEURALNETWORK":
-                this.renderNeuralNetwork();
-                break;
-            case "RECURRENTNEURALNETWORK":
-                renderRecurrentNeuralNetwork();
-                break;
+        if (this.#selectedNetwork.startsWith("NEURALNETWORK")) {
+            this.renderNeuralNetwork();
+        } else {
+            this.renderRecurrentNeuralNetwork();
         }
     }
 
     renderNeuralNetwork() {
         this.generateNeuralNetworkConfig();
-        this.#network = new brain.NeuralNetwork(this.#networkConfig);
+        switch (this.#selectedNetwork) {
+            case "NEURALNETWORK": 
+                this.#network = new brain.NeuralNetwork(this.#networkConfig);
+                this.renderNetwork();
+                break;
+            case "NEURALNETWORKGPU":
+                this.#network = new brain.NeuralNetworkGPU(this.#networkConfig);
+                this.renderNetwork();
+                break;
+            case "NEURALNETWORK-FEED-FORWARD":
+                this.#network = new brain.FeedForward(this.#networkConfig);
+                this.renderNetwork();
+                break;
+        }
+    }
+
+    renderRecurrentNeuralNetwork() {
+        this.generateRecurrentNeuralNetworkConfig();
+        switch (this.#selectedNetwork) {
+            case "RECURRENTNEURALNETWORK-RNN-TIME-STEP": 
+                this.#network = new brain.recurrent.RNNTimeStep(this.#networkConfig);
+                this.renderNetwork();
+                break;
+            case "RECURRENTNEURALNETWORK-LSTM-TIME-STEP":
+                this.#network = new brain.recurrent.LSTMTimeStep(this.#networkConfig);
+                this.renderNetwork();
+                break;
+            case "RECURRENTNEURALNETWORK-GRU-TIME-STEP":
+                this.#network = new brain.recurrent.GRUTimeStep(this.#networkConfig);
+                this.renderNetwork();
+                break;
+            case "RECURRENTNEURALNETWORK-RNN":
+                this.#network = new brain.recurrent.RNN(this.#networkConfig);
+                this.renderNetwork();
+                break;
+            case "RECURRENTNEURALNETWORK-LSTM":
+                this.#network = new brain.recurrent.LSTM(this.#networkConfig);
+                this.renderNetwork();
+                break;
+            case "RECURRENTNEURALNETWORK-GRU":
+                this.#network = new brain.recurrent.GRU(this.#networkConfig);
+                this.renderNetwork();
+                break;
+            case "RECURRENTNEURALNETWORK":
+                this.#network = new brain.Recurrent(this.#networkConfig);
+                this.renderNetwork();
+                break;
+        }
+    }
+
+    renderNetwork() {
         const height = this.NETWORK_RENDER.offsetHeight;
         const width = this.NETWORK_RENDER.offsetWidth;
         this.NETWORK_RENDER.innerHTML = brain.utilities.toSVG(this.#network, {height: height, width: width, inputs:{labels: this.getLabels()}});
     }
 
-    renderRecurrentNeuralNetwork() {}
-
     getLabels() {
-        console.log("Labels cols: " + this.#dfInput.columns);
         if (this.#dfInput.columns) {
             if (this.#dfInput.columns[0] === "input" || this.#dfInput.columns[0].input) {
-                console.log("yeah");
                 let labels = [];
                 let counter = 0;
                 for (let i in this.#dfInput.columns) {labels.push("input-" + counter++)}
@@ -785,22 +940,55 @@ class BrainUIEditor {
                 return this.#dfInput.columns;
             }
         } else {
-            return [];
+            if (this.#inputDataStructureType === "ARRAY-OF-STRINGS") {
+                return ["Text"];
+            } else if (this.#inputDataStructureType === "ARRAY-OF-NUMBERS") {
+                return ["Value"];
+            } else {
+                return ["Input"];
+            }
         }
     }
 
     generateNeuralNetworkConfig() {
-        if (this.NETWORK_SIZE.value === "") this.calculateNetworkSize();
-        const size = this.NETWORK_SIZE.value.split(',').map((item) => {return parseInt(item, 10)});
-        this.#networkConfig = {
-            inputSize: size[0],
-            inputRange: size[0],
-            hiddenLayers: size.slice(1, size.length - 1),
-            outputSize: size[size.length - 1],
-            leakyReluAlpha: this.NETWORK_LEAKY_RELU_ALPHA.value === "" ? 0.01 : this.NETWORK_LEAKY_RELU_ALPHA.value,
-            binaryThresh: this.NETWORK_BINARYTHRESH.value === "" ? 0.5 : this.NETWORK_BINARYTHRESH.value,
-            activation: this.#selectedNetworkActivation === undefined ? 'sigmoid' : this.#selectedNetworkActivation
-        };
+        try {
+            if (this.NETWORK_SIZE.value === "") this.calculateNetworkSize();
+            const size = this.NETWORK_SIZE.value.split(',').map((item) => {return parseInt(item, 10)});
+            this.#networkConfig = {
+                inputSize: size[0],
+                inputRange: size[0],
+                hiddenLayers: size.slice(1, size.length - 1),
+                outputSize: size[size.length - 1],
+                leakyReluAlpha: this.NETWORK_LEAKY_RELU_ALPHA.value === "" ? 0.01 : Number(this.NETWORK_LEAKY_RELU_ALPHA.value),
+                binaryThresh: this.NETWORK_BINARYTHRESH.value === "" ? 0.5 : Number(this.NETWORK_BINARYTHRESH.value),
+                activation: this.#selectedNetworkActivation === undefined ? 'sigmoid' : this.#selectedNetworkActivation
+            };
+        } catch(err) {
+            toastr.error("Config error " + err);
+        }
+        
+    }
+
+    generateRecurrentNeuralNetworkConfig() {
+        try {
+            if (this.NETWORK_SIZE.value === "") this.calculateNetworkSize();
+            const size = this.NETWORK_SIZE.value.split(',').map((item) => {return parseInt(item, 10)});
+            this.#networkConfig = {
+                inputSize: size[0],
+                inputRange: size[0],
+                hiddenLayers: size.slice(1, size.length - 1),
+                outputSize: size[size.length - 1],
+                decayRate: this.NETWORK_DECAY_RATE.value === "" ? 0.999 : Number(this.NETWORK_DECAY_RATE.value),
+                smoothEps: Number(this.NETWORK_SMOOTH_EPS.value === "" ? 1e-8 : this.NETWORK_SMOOTH_EPS.value),
+                regc: this.NETWORK_REGC.value === "" ? 0.000001 : Number(this.NETWORK_REGC.value),
+                clipval: this.NETWORK_CLIPVAL.value === "" ? 5 : Number(this.NETWORK_CLIPVAL.value),
+                maxPredictionLength: this.NETWORK_MAX_PREDICTION_LENGTH.value === "" ? 100 : Number(this.NETWORK_MAX_PREDICTION_LENGTH.value),
+                learningRate: this.NETWORK_LEARNING_RATE.value === "" ? 0.01 : Number(this.NETWORK_LEARNING_RATE.value)
+            };
+        } catch(err) {
+            toastr.error("Config error " + err);
+        }
+        
     }
 
     //************** */
@@ -810,13 +998,11 @@ class BrainUIEditor {
     //Initialize the training data
     initTraining() {
         if (this.#selectedNetwork == undefined || this.#selectedNetwork === "") toastr.error("No network type is selected");
-        switch (this.#selectedNetwork) {
-            case "NEURALNETWORK":
-                this.initTrainingNeuralnetwork();
-                break;
-            case "RECURRENTNEURALNETWORK":
-                this.initTrainingRecurrentNeuralnetwork();
-                break;
+        
+        if (this.#selectedNetwork.startsWith("NEURALNETWORK")) {
+            this.initTrainingNeuralnetwork();
+        } else {
+            this.initTrainingRecurrentNeuralnetwork();
         }
     }
 
@@ -835,14 +1021,16 @@ class BrainUIEditor {
     }
 
     startTraining() {
-        switch (this.#selectedNetwork) {
-            case "NEURALNETWORK":
+        try {
+            if (this.#selectedNetwork.startsWith("NEURALNETWORK")) {
                 this.trainNeuralNetwork();
-                break;
-            case "RECURRENTNEURALNETWORK":
+            } else {
                 this.trainReccurentNeuralNetwork();
-                break;
+            }
+        } catch(err) {
+            toastr.error("Training error: " + err);
         }
+        
     }
 
     trainNeuralNetwork() {
@@ -857,13 +1045,12 @@ class BrainUIEditor {
             log: details => this.trainingLog(details),
             logPeriod: 10, 
         });
-        //console.log(result);
     }
 
     trainReccurentNeuralNetwork() {
         this.#iterations = Number(this.TRAINING_ITERATIONS.value === "" ? 2000 : this.TRAINING_ITERATIONS.value);
         this.#errorThresh = Number(this.TRAINING_ERROR_THRESH.value === "" ? 0.005 : this.TRAINING_ERROR_THRESH.value);
-        const learningRate = Number(this.TRAINING_LEARNING_RATE.value === "" ? 0.3 : this.TRAINING_LEARNING_RATE.value);
+        const learningRate = Number(this.TRAINING_LEARNING_RATE.value === "" ? 0.1 : this.TRAINING_LEARNING_RATE.value);
         this.TRAINING_PROGRESS.max = this.#iterations;
         const result = this.#network.train(this.#brainTrainingData, {
             iterations: this.#iterations,
@@ -872,24 +1059,25 @@ class BrainUIEditor {
             log: details => this.trainingLog(details),
             logPeriod: 10,
         });
-        //console.log(result);
     }
 
     trainingLog(details) {
-        this.TRAINING_PROGRESS.value = details.iterations;
+        this.#trainedSuccessfully = false;
+        //this.TRAINING_PROGRESS.value = details.iterations;
         console.log(details);
         let output = "";
-        if(this.#errorThresh >= details.error.toFixed(2)) {
+        if(this.#errorThresh >= details.error) {
             output = "<div style='text-align: center; padding-top:1rem; padding-bottom: 1rem; color:red;'>";
         } else {
             output = "<div style='text-align: center; padding-top:1rem; padding-bottom: 1rem;'>";
         }
 
-        if(this.#iterations === details.iterations) {
+        if(this.#iterations -1 <= details.iterations) {
             output = "<div style='text-align: center; padding-top:1rem; padding-bottom: 1rem; color:green;'>";
+            this.#trainedSuccessfully = true;
         }
 
-        output += "Error: " + (details.error * 100).toFixed(2) + "%. Limit: " + this.#errorThresh * 100 + "%";
+        output += "Error: " + details.error + " Limit: " + this.#errorThresh;
         output += "<br/>";
         output += "Iterations: " + details.iterations + " of " + this.#iterations; 
         output += "</div>";
@@ -948,6 +1136,35 @@ class BrainUIEditor {
         return testInputData;
     }
 
+    //************ */
+    // Export
+    //************ */
+
+    initExport() {
+        if (this.#trainedSuccessfully) {
+            this.EXPORT_READY_TO_EXPORT.classList.remove("hide");
+            this.EXPORT_READY_TO_EXPORT.classList.add("show");
+
+            this.EXPORT_NOTHING_TO_EXPORT.classList.add("hide");
+            this.EXPORT_NOTHING_TO_EXPORT.classList.remove("show");
+        } else {
+            this.EXPORT_READY_TO_EXPORT.classList.add("hide");
+            this.EXPORT_READY_TO_EXPORT.classList.remove("show");
+
+            this.EXPORT_NOTHING_TO_EXPORT.classList.add("show");
+            this.EXPORT_NOTHING_TO_EXPORT.classList.remove("hide");
+        }
+    }
+
+    downloadBrainModel() {
+        const fileName = this.EXPORT_MODEL_NAME.value !== "" ? this.EXPORT_MODEL_NAME.value + ".json" : "brain-model.json";
+        let a = document.createElement("a");
+        a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(this.#network.toJSON()));
+        a.target = '_blank';
+        a.download = fileName;
+        a.click();
+    }
+
 }
 
 class BrainUIContentSwitcher {
@@ -966,11 +1183,14 @@ class BrainUIContentSwitcher {
         this.PANEL_TRAINING = shadow.querySelector("#panel-training");
         this.PANEL_TESTING = shadow.querySelector("#panel-testing");
 
+        this.PANEL_EXPORT = shadow.querySelector("#panel-export");
+
     
         shadow.querySelector("#load-btn").addEventListener('click', this.showLoad.bind(this));
         shadow.querySelector("#network-btn").addEventListener('click', this.showNetwork.bind(this));
         shadow.querySelector("#training-btn").addEventListener('click', this.showTraining.bind(this));
         shadow.querySelector("#testing-btn").addEventListener('click', this.showTesting.bind(this));
+        shadow.querySelector("#export-btn").addEventListener('click', this.showExport.bind(this));
         
         this.hideAll();
         this.showLoad();
@@ -1002,6 +1222,11 @@ class BrainUIContentSwitcher {
         this.PANEL_TESTING.classList.add("show");
     }
 
+    showExport() {
+        this.hideAll();
+        this.PANEL_EXPORT.classList.add("show");
+    }
+
     hideAll(){
         this.PANEL_LOAD.classList.remove("show");
         this.PANEL_LOAD.classList.add("hide");
@@ -1030,6 +1255,9 @@ class BrainUIContentSwitcher {
 
         this.PANEL_TESTING.classList.remove("show");
         this.PANEL_TESTING.classList.add("hide");
+
+        this.PANEL_EXPORT.classList.remove("show");
+        this.PANEL_EXPORT.classList.add("hide");
     }
 
 }
