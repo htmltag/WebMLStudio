@@ -229,7 +229,10 @@ text-align: center;
                 </label>
             </span>
         </div>
-        <button id="network-render-graph">Create & Render Network</button>
+        <div class="grid">
+            <button id="network-render-graph">Create & Render Network</button>
+            <button id="network-create-no-config">Create & Render Network without config</button>
+        </div>
     </div>
     <div id="panel-training">
         <div class="grid">
@@ -303,16 +306,17 @@ class BrainUIEditor {
     #brainTrainingData;
 
 
-    #selectedNetwork;
+    #selectedNetwork = "NONE";
+    #networkNoConfig = false;
     #selectedNetworkActivation;
     #networkConfig;
     #network;
-
-    #iterations;
-    #errorThresh;
-
     #labels = [];
 
+    #iterations;
+    #iterationCounter = 0;
+    #logPeriod = 10;
+    #errorThresh;
     #trainedSuccessfully = false;
     
 
@@ -372,7 +376,8 @@ class BrainUIEditor {
 
         shadow.querySelector("#select-network").addEventListener('change', this.selectedNetworkChange.bind(this));
         shadow.querySelector("#select-activation").addEventListener('change', this.selectedNetworkChange.bind(this));
-        shadow.querySelector("#network-render-graph").addEventListener('click', this.renderNetworkGraph.bind(this));
+        shadow.querySelector("#network-render-graph").addEventListener('click', this.renderNetworkGraphWithConfig.bind(this));
+        shadow.querySelector("#network-create-no-config").addEventListener('click', this.renderNetworkGraphNoConfig.bind(this));
 
         //Training
         this.TRAINING_ITERATIONS = shadow.querySelector("#training-iterations");
@@ -861,7 +866,18 @@ class BrainUIEditor {
         this.NETWORK_SIZE.value = s;
     }
 
+    renderNetworkGraphNoConfig() {
+        this.#networkNoConfig = true;
+        this.renderNetworkGraph();
+    }
+
+    renderNetworkGraphWithConfig() {
+        this.#networkNoConfig = false;
+        this.renderNetworkGraph();
+    }
+
     renderNetworkGraph() {
+        if (this.#selectedNetwork === "NONE") toastr.error("Must select network type")
         if (this.#selectedNetwork.startsWith("NEURALNETWORK")) {
             this.renderNeuralNetwork();
         } else {
@@ -870,52 +886,52 @@ class BrainUIEditor {
     }
 
     renderNeuralNetwork() {
-        this.generateNeuralNetworkConfig();
+        if(this.#networkNoConfig === false) this.generateNeuralNetworkConfig();
         switch (this.#selectedNetwork) {
             case "NEURALNETWORK": 
-                this.#network = new brain.NeuralNetwork(this.#networkConfig);
+                this.#network = this.#networkNoConfig ? new brain.NeuralNetwork() : new brain.NeuralNetwork(this.#networkConfig);
                 this.renderNetwork();
                 break;
             case "NEURALNETWORKGPU":
-                this.#network = new brain.NeuralNetworkGPU(this.#networkConfig);
+                this.#network = this.#networkNoConfig ? new brain.NeuralNetworkGPU() : new brain.NeuralNetworkGPU(this.#networkConfig);
                 this.renderNetwork();
                 break;
             case "NEURALNETWORK-FEED-FORWARD":
-                this.#network = new brain.FeedForward(this.#networkConfig);
+                this.#network = this.#networkNoConfig ? new brain.FeedForward() : new brain.FeedForward(this.#networkConfig);
                 this.renderNetwork();
                 break;
         }
     }
 
     renderRecurrentNeuralNetwork() {
-        this.generateRecurrentNeuralNetworkConfig();
+        if(this.#networkNoConfig === false) this.generateRecurrentNeuralNetworkConfig();
         switch (this.#selectedNetwork) {
             case "RECURRENTNEURALNETWORK-RNN-TIME-STEP": 
-                this.#network = new brain.recurrent.RNNTimeStep(this.#networkConfig);
+                this.#network = this.#networkNoConfig ? new brain.recurrent.RNNTimeStep() : new brain.recurrent.RNNTimeStep(this.#networkConfig);
                 this.renderNetwork();
                 break;
             case "RECURRENTNEURALNETWORK-LSTM-TIME-STEP":
-                this.#network = new brain.recurrent.LSTMTimeStep(this.#networkConfig);
+                this.#network = this.#networkNoConfig ? new brain.recurrent.LSTMTimeStep() : new brain.recurrent.LSTMTimeStep(this.#networkConfig);
                 this.renderNetwork();
                 break;
             case "RECURRENTNEURALNETWORK-GRU-TIME-STEP":
-                this.#network = new brain.recurrent.GRUTimeStep(this.#networkConfig);
+                this.#network = this.#networkNoConfig ? new brain.recurrent.GRUTimeStep() : new brain.recurrent.GRUTimeStep(this.#networkConfig);
                 this.renderNetwork();
                 break;
             case "RECURRENTNEURALNETWORK-RNN":
-                this.#network = new brain.recurrent.RNN(this.#networkConfig);
+                this.#network = this.#networkNoConfig ? new brain.recurrent.RNN() : new brain.recurrent.RNN(this.#networkConfig);
                 this.renderNetwork();
                 break;
             case "RECURRENTNEURALNETWORK-LSTM":
-                this.#network = new brain.recurrent.LSTM(this.#networkConfig);
+                this.#network = this.#networkNoConfig ? new brain.recurrent.LSTM() : new brain.recurrent.LSTM(this.#networkConfig);
                 this.renderNetwork();
                 break;
             case "RECURRENTNEURALNETWORK-GRU":
-                this.#network = new brain.recurrent.GRU(this.#networkConfig);
+                this.#network = this.#networkNoConfig ? new brain.recurrent.GRU() : new brain.recurrent.GRU(this.#networkConfig);
                 this.renderNetwork();
                 break;
             case "RECURRENTNEURALNETWORK":
-                this.#network = new brain.Recurrent(this.#networkConfig);
+                this.#network = this.#networkNoConfig ? new brain.Recurrent() : new brain.Recurrent(this.#networkConfig);
                 this.renderNetwork();
                 break;
         }
@@ -924,7 +940,12 @@ class BrainUIEditor {
     renderNetwork() {
         const height = this.NETWORK_RENDER.offsetHeight;
         const width = this.NETWORK_RENDER.offsetWidth;
-        this.NETWORK_RENDER.innerHTML = brain.utilities.toSVG(this.#network, {height: height, width: width, inputs:{labels: this.getLabels()}});
+        if (this.#networkNoConfig) {
+            this.NETWORK_RENDER.innerHTML = brain.utilities.toSVG(this.#network, {height: height, width: width});
+        } else {
+            this.NETWORK_RENDER.innerHTML = brain.utilities.toSVG(this.#network, {height: height, width: width, inputs:{labels: this.getLabels()}});
+        }
+        
     }
 
     getLabels() {
@@ -941,10 +962,13 @@ class BrainUIEditor {
             }
         } else {
             if (this.#inputDataStructureType === "ARRAY-OF-STRINGS") {
+                this.#labels = "Text";
                 return ["Text"];
             } else if (this.#inputDataStructureType === "ARRAY-OF-NUMBERS") {
+                this.#labels = "Number-Value";
                 return ["Value"];
             } else {
+                this.#labels = "Input";
                 return ["Input"];
             }
         }
@@ -1028,26 +1052,32 @@ class BrainUIEditor {
                 this.trainReccurentNeuralNetwork();
             }
         } catch(err) {
+            console.log(err);
             toastr.error("Training error: " + err);
         }
         
     }
 
     trainNeuralNetwork() {
+        this.#iterationCounter = 0;
         this.#iterations = Number(this.TRAINING_ITERATIONS.value === "" ? 2000 : this.TRAINING_ITERATIONS.value);
         this.#errorThresh = Number(this.TRAINING_ERROR_THRESH.value === "" ? 0.005 : this.TRAINING_ERROR_THRESH.value);
         const learningRate = Number(this.TRAINING_LEARNING_RATE.value === "" ? 0.3 : this.TRAINING_LEARNING_RATE.value);
         this.TRAINING_PROGRESS.max = this.#iterations;
+        console.log("training is starting");
         const result = this.#network.train(this.#brainTrainingData, {
             iterations: this.#iterations,
             errorThresh: this.#errorThresh,
             learningRate: learningRate,
             log: details => this.trainingLog(details),
-            logPeriod: 10, 
+            logPeriod: this.#logPeriod, 
         });
+        if (result.iterations < this.#logPeriod)
+            this.TRAINING_OUTPUT_LOG.innerHTML += "<div style='text-align: center;'>Result error: " + result.error + " iterations: " + result.iterations + "</div>";
     }
 
     trainReccurentNeuralNetwork() {
+        this.#iterationCounter = 0;
         this.#iterations = Number(this.TRAINING_ITERATIONS.value === "" ? 2000 : this.TRAINING_ITERATIONS.value);
         this.#errorThresh = Number(this.TRAINING_ERROR_THRESH.value === "" ? 0.005 : this.TRAINING_ERROR_THRESH.value);
         const learningRate = Number(this.TRAINING_LEARNING_RATE.value === "" ? 0.1 : this.TRAINING_LEARNING_RATE.value);
@@ -1057,13 +1087,18 @@ class BrainUIEditor {
             errorThresh: this.#errorThresh,
             learningRate: learningRate,
             log: details => this.trainingLog(details),
-            logPeriod: 10,
+            logPeriod: this.#logPeriod,
         });
+        if (result.iterations < this.#logPeriod)
+            this.TRAINING_OUTPUT_LOG.innerHTML += "<div style='text-align: center;'>Result error: " + result.error + " iterations: " + result.iterations + "</div>";
     }
 
     trainingLog(details) {
+        this.#iterationCounter += 1;
         this.#trainedSuccessfully = false;
-        //this.TRAINING_PROGRESS.value = details.iterations;
+        
+        this.TRAINING_PROGRESS.value = Number(this.#iterationCounter * this.#logPeriod);
+        
         console.log(details);
         let output = "";
         if(this.#errorThresh >= details.error) {
@@ -1072,15 +1107,20 @@ class BrainUIEditor {
             output = "<div style='text-align: center; padding-top:1rem; padding-bottom: 1rem;'>";
         }
 
-        if(this.#iterations -1 <= details.iterations) {
+        if(this.#iterations -1 <= Number(this.#iterationCounter * this.#logPeriod)) {
             output = "<div style='text-align: center; padding-top:1rem; padding-bottom: 1rem; color:green;'>";
             this.#trainedSuccessfully = true;
         }
 
-        output += "Error: " + details.error + " Limit: " + this.#errorThresh;
-        output += "<br/>";
-        output += "Iterations: " + details.iterations + " of " + this.#iterations; 
-        output += "</div>";
+        if (this.#selectedNetwork.startsWith("NEURALNETWORK")) {
+            output += "Error: " + details.error + " Limit: " + this.#errorThresh;
+            output += "<br/>";
+            output += "Iterations: " + details.iterations + " of " + this.#iterations; 
+            output += "</div>";
+        } else {
+            output += "Progress: " + details;
+            output += "</div>";
+        }
 
         this.TRAINING_OUTPUT_LOG.innerHTML = output;
     }
