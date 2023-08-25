@@ -258,7 +258,7 @@ text-align: center;
             </label>
             <span class="grid">
                 <label for="training-learning-rate">
-                    Training rate
+                    Learning rate
                     <input type="text" id="training-learning-rate" placeholder="Learning rate">
                 </label>
                 <button id="training-clear-fields-btn">Clear fields <i class="fa-solid fa-trash-can"></i></button>
@@ -274,7 +274,21 @@ text-align: center;
         <hr/>
         <div id="testing-form-wrapper"></div>
         <div id="testing-result-wrapper">
-            <button id="testing-run-btn">Run</button>
+            <div class="grid">
+                <select id="select-testing-input-format">
+                    <option value="NONE" disabled selected>Select input format</option>
+                    <option value="TEXT">Text</option>
+                    <option value="NUMBER">Number</option>
+                    <option value="ARRAY-OF-STRINGS">Text Array []</option>
+                    <option value="ARRAY-OF-NUMBERS">Number Array []</option>
+                    <option value="OBJECT">Object {}</option>
+                </select>
+                <button id="testing-run-btn">Run</button>
+                <span class="grid" id="testing-forcast-wrapper">
+                    <input type="number" id="testing-forcast-counter">
+                    <button id="testing-forcast-btn">Forcast</button>
+                </span>
+            </div>
             <span id="testing-result"></span> 
         </div>
     </div>
@@ -328,11 +342,10 @@ class BrainUIEditor {
     #network;
     #labels = [];
 
-    #iterations;
-    #iterationCounter = 0;
     #logPeriod = 10;
-    #errorThresh;
     #trainedSuccessfully = false;
+
+    #testingInputFormat = "NONE";
     
 
     constructor(shadow) {
@@ -391,6 +404,7 @@ class BrainUIEditor {
         this.NETWORK_SMOOTH_EPS = shadow.querySelector("#network-smooth-eps");
         this.NETWORK_RENDER = shadow.querySelector("#network-render");
 
+        shadow.querySelector("#network-btn").addEventListener('click', this.initNetwork.bind(this));
         shadow.querySelector("#select-network").addEventListener('change', this.selectedNetworkChange.bind(this));
         shadow.querySelector("#network-try-calculate-btn").addEventListener('click', this.calculateNetworkSize.bind(this));
         shadow.querySelector("#network-clear-fields-btn").addEventListener('click', this.clearNetworkFields.bind(this));
@@ -414,10 +428,15 @@ class BrainUIEditor {
         this.TESTING_INPUT_COLUMNS = shadow.querySelector("#testing-columns");
         this.TESTING_FORM = shadow.querySelector("#testing-form-wrapper");
         this.TESTING_RESULT = shadow.querySelector("#testing-result");
+        this.TESTING_SELECT_INPUT_FORMAT = shadow.querySelector("#select-testing-input-format");
+        this.TESTING_FORCAST_COUNTER = shadow.querySelector("#testing-forcast-counter");
+        this.TESTING_FORCAST_WRAPPER = shadow.querySelector("#testing-forcast-wrapper");
 
         shadow.querySelector("#testing-btn").addEventListener('click', this.initTesting.bind(this));
         shadow.querySelector("#testing-generate-form-btn").addEventListener('click', this.generateTestingForm.bind(this));
         shadow.querySelector("#testing-run-btn").addEventListener('click', this.runTest.bind(this));
+        shadow.querySelector("#select-testing-input-format").addEventListener('change', this.selectedTestingInputFormatChange.bind(this));
+        shadow.querySelector("#testing-forcast-btn").addEventListener('click', this.forcast.bind(this));
 
         // Export
         this.EXPORT_NOTHING_TO_EXPORT = shadow.querySelector("#export-nothing-to-export");
@@ -813,6 +832,10 @@ class BrainUIEditor {
     //************** */
     // Network
     //************** */
+    initNetwork() {
+        this.NETWORK_RENDER.innerHTML = "";
+    }
+
     selectedNetworkChange(){
         this.#selectedNetwork = this.SELECTED_NETWORK.options[this.SELECTED_NETWORK.selectedIndex].value;
 
@@ -1169,26 +1192,14 @@ class BrainUIEditor {
     //Initialize the training data
     initTraining() {
         if (this.#selectedNetwork == undefined || this.#selectedNetwork === "") toastr.error("No network type is selected");
-        
-        if (this.#selectedNetwork.startsWith("NEURALNETWORK")) {
-            this.initTrainingNeuralnetwork();
-        } else {
-            this.initTrainingRecurrentNeuralnetwork();
-        }
+        this.TRAINING_OUTPUT_LOG.innerHTML = "";
+        this.initTrainingNetwork();
     }
 
-    // Set default values in training UI for neural network
-    initTrainingNeuralnetwork() {
-        this.TRAINING_ITERATIONS.value = 2000;
-        this.TRAINING_ERROR_THRESH.value = 0.005;
-        this.TRAINING_LEARNING_RATE.value = 0.3;
-    }
-
-    // Set default values in training UI for recurrent neural network
-    initTrainingRecurrentNeuralnetwork() {
-        this.TRAINING_ITERATIONS.value = 2000;
-        this.TRAINING_ERROR_THRESH.value = 0.005;
-        this.TRAINING_LEARNING_RATE.value = 0.1;
+    initTrainingNetwork() {
+        this.TRAINING_ITERATIONS.value = this.getValueForNetworkInputField("iterations");
+        this.TRAINING_ERROR_THRESH.value = this.getValueForNetworkInputField("errorThresh");
+        this.TRAINING_LEARNING_RATE.value = this.getValueForNetworkInputField("learningRate");
     }
 
     clearTrainingFields() {
@@ -1215,6 +1226,8 @@ class BrainUIEditor {
     }
 
     trainNetwork() {
+        this.TRAINING_OUTPUT_LOG.innerHTML = "";
+
         let trainingConfig = {
             log: details => console.log(details),
             logPeriod: this.#logPeriod,
@@ -1249,6 +1262,21 @@ class BrainUIEditor {
 
     initTesting() {
         this.TESTING_INPUT_COLUMNS.value = this.#labels;
+        this.TESTING_RESULT.innerHTML = "";
+        this.TESTING_FORM.innerHTML = "";
+
+        this.TESTING_FORCAST_WRAPPER.classList.add("hide");
+        if (this.#selectedNetwork === "RECURRENTNEURALNETWORK-RNN-TIME-STEP" ||
+        this.#selectedNetwork === "RECURRENTNEURALNETWORK-LSTM-TIME-STEP" ||
+        this.#selectedNetwork === "RECURRENTNEURALNETWORK-GRU-TIME-STEP") {
+            this.TESTING_FORCAST_WRAPPER.classList.remove("hide");
+            this.TESTING_FORCAST_WRAPPER.classList.add("show");
+            this.TESTING_FORCAST_WRAPPER.classList.add("flex-grid");
+        }
+    }
+
+    selectedTestingInputFormatChange() {
+        this.#testingInputFormat = this.TESTING_SELECT_INPUT_FORMAT.options[this.TESTING_SELECT_INPUT_FORMAT.selectedIndex].value;
     }
     
     generateTestingForm() {
@@ -1274,8 +1302,15 @@ class BrainUIEditor {
     }
 
     runTest() {
+        if (this.#testingInputFormat === "OBJECT") console.log("test input JSON.stringify: " + JSON.stringify(this.generateTestInput()));
         this.TESTING_RESULT.innerHTML = "";
         this.TESTING_RESULT.innerHTML = JSON.stringify(this.#network.run(this.generateTestInput()));
+    }
+
+    forcast() {
+        if (this.TESTING_FORCAST_COUNTER.value == undefined) toastr.error("Add number to the forcast counter");
+        this.TESTING_RESULT.innerHTML = "";
+        this.TESTING_RESULT.innerHTML = JSON.stringify(this.#network.forcast(this.generateTestInput(), this.TESTING_FORCAST_COUNTER.value));
     }
 
     generateTestInput() {
@@ -1283,14 +1318,100 @@ class BrainUIEditor {
 
         const inputTestColumns = this.TESTING_INPUT_COLUMNS.value.split(',');
 
-        let testInputData = {};
-        for (const key in inputTestColumns) {
-            if (Object.hasOwnProperty.call(inputTestColumns, key)) {
-                const element = inputTestColumns[key].toLocaleLowerCase();
-                testInputData[element] = this.#shadow.querySelector('#testing-input-' + element).value;
+        if (this.#testingInputFormat === "NONE") {
+            toastr.error("Select a input format");
+            return;
+        }
+
+        if (this.#testingInputFormat === "TEXT") {
+            let testInputData = "";
+            for (const key in inputTestColumns) {
+                if (Object.hasOwnProperty.call(inputTestColumns, key)) {
+                    const element = inputTestColumns[key].toLocaleLowerCase();
+                    testInputData+= this.#shadow.querySelector('#testing-input-' + element).value;
+                }
+            }
+            return testInputData;
+        }
+
+        if (this.#testingInputFormat === "NUMBER") {
+            let testInputData;
+            for (const key in inputTestColumns) {
+                if (Object.hasOwnProperty.call(inputTestColumns, key)) {
+                    const element = inputTestColumns[key].toLocaleLowerCase();
+                    testInputData = this.performeArithmeticOnTestInput(this.#shadow.querySelector('#testing-input-' + element).value);
+                }
+            }
+            return testInputData;
+        }
+
+        if (this.#testingInputFormat === "ARRAY-OF-STRINGS") {
+            let testInputData = [];
+            for (const key in inputTestColumns) {
+                if (Object.hasOwnProperty.call(inputTestColumns, key)) {
+                    const element = inputTestColumns[key].toLocaleLowerCase();
+                    testInputData.push(this.#shadow.querySelector('#testing-input-' + element).value);
+                }
+            }
+            return testInputData;
+        }
+
+        if (this.#testingInputFormat === "ARRAY-OF-NUMBERS") {
+            let testInputData = [];
+            for (const key in inputTestColumns) {
+                if (Object.hasOwnProperty.call(inputTestColumns, key)) {
+                    const element = inputTestColumns[key].toLocaleLowerCase();
+                    testInputData.push(this.performeArithmeticOnTestInput(this.#shadow.querySelector('#testing-input-' + element).value));
+                }
+            }
+            return testInputData;
+        }
+
+
+        if (this.#testingInputFormat === "OBJECT") {
+            let testInputData = {};
+            for (const key in inputTestColumns) {
+                if (Object.hasOwnProperty.call(inputTestColumns, key)) {
+                    const element = inputTestColumns[key].toLocaleLowerCase();
+                    testInputData[element] = this.performeArithmeticOnTestInput(this.#shadow.querySelector('#testing-input-' + element).value);
+                }
+            }
+            return testInputData;
+        }
+        
+    }
+
+    performeArithmeticOnTestInput(inputValue) {
+        if (typeof inputValue === "string") {
+            if (inputValue.includes("/")) {
+                const v = inputValue.split("/");
+                const v0 = Number(v[0].trim());
+                const v1 = Number(v[1].trim());
+                return Number(v0 / v1);
+            }
+
+            if (inputValue.includes("*")) {
+                const v = inputValue.split("*");
+                const v0 = Number(v[0].trim());
+                const v1 = Number(v[1].trim());
+                return Number(v0 * v1);
+            }
+
+            if (inputValue.includes("+")) {
+                const v = inputValue.split("+");
+                const v0 = Number(v[0].trim());
+                const v1 = Number(v[1].trim());
+                return Number(v0 + v1);
+            }
+
+            if (inputValue.includes("-")) {
+                const v = inputValue.split("-");
+                const v0 = Number(v[0].trim());
+                const v1 = Number(v[1].trim());
+                return Number(v0 - v1);
             }
         }
-        return testInputData;
+        return inputValue;
     }
 
     //************ */
