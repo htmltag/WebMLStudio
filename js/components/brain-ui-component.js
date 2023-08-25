@@ -86,6 +86,7 @@ text-align: center;
             <li><a href="#" role="button" id="empty-btn" class="warning"><i class="fa-solid fa-trash-can"></i></a></li>
         </ul>
     </nav>
+    <hr/>
     <div id="panel-load">
         <div class="grid">
             <select id="select-filetype-load">
@@ -156,10 +157,8 @@ text-align: center;
     </div>
     <div id="panel-network">
         <div class="grid">
-            <label for="select-network">
-                Network type
             <select id="select-network">
-                <option value="NONE" disabled selected>Select network</option>
+                <option value="NONE" disabled selected>Select network type</option>
                 <option value="NEURALNETWORK">Feedforward Neural Network</option>
                 <option value="NEURALNETWORKGPU">Feedforward Neural Network GPU</option>
                 <option value="RECURRENTNEURALNETWORK-RNN-TIME-STEP">Time Step Recurrent Neural Network (RNN)</option>
@@ -171,10 +170,23 @@ text-align: center;
                 <option value="NEURALNETWORK-FEED-FORWARD">Highly Customizable Feedforward Neural Network</option>
                 <option value="RECURRENTNEURALNETWORK">Highly Customizable Recurrent Neural Network</option>
             </select>
+            <span class="grid">
+                <button id="network-try-calculate-btn">Try calculate network <i class="fa-solid fa-calculator"></i></button>
+                <button id="network-clear-fields-btn">Clear fields <i class="fa-solid fa-trash-can"></i></button>
+            </span>
+        </div>
+        <div class="grid">
+            <label for="network-input-layer">
+                Input Layer
+                <input type="text" id="network-input-layer" placeholder="A number">
             </label>
-            <label for="network-size">
-                Network size
-                <input type="text" id="network-size" placeholder="Array of ints">
+            <label for="network-hidden-layer">
+                Hidden Layer
+                <input type="text" id="network-hidden-layer" placeholder="Array of ints">
+            </label>
+            <label for="network-output-layer">
+                Output Layer
+                <input type="text" id="network-output-layer" placeholder="A number">
             </label>
         </div>
         <div id="network-nn-fields" class="hide">
@@ -244,12 +256,15 @@ text-align: center;
                 Error Thresh
                 <input type="text" id="training-error-thresh" placeholder="Error percentage">
             </label>
-            <label for="training-learning-rate">
-                Training rate
-                <input type="text" id="training-learning-rate" placeholder="Learning rate">
-            </label>
+            <span class="grid">
+                <label for="training-learning-rate">
+                    Training rate
+                    <input type="text" id="training-learning-rate" placeholder="Learning rate">
+                </label>
+                <button id="training-clear-fields-btn">Clear fields <i class="fa-solid fa-trash-can"></i></button>
+            </span>
         </div>
-        <button id="start-training-btn">Start training</button>
+        <button aria-busy="false" id="start-training-btn">Start training</button>
     </div>
     <div id="panel-testing">
         <div class="grid">
@@ -362,7 +377,9 @@ class BrainUIEditor {
         this.NETWORK_NN_FIELDS = shadow.querySelector("#network-nn-fields");
         this.NETWORK_RNN_FIELDS = shadow.querySelector("#network-rnn-fields");
         this.SELECTED_NETWORK = shadow.querySelector("#select-network");
-        this.NETWORK_SIZE = shadow.querySelector("#network-size");
+        this.NETWORK_INPUT_LAYER = shadow.querySelector("#network-input-layer");
+        this.NETWORK_HIDDEN_LAYER = shadow.querySelector("#network-hidden-layer");
+        this.NETWORK_OUTPUT_LAYER = shadow.querySelector("#network-output-layer");
         this.NETWORK_BINARYTHRESH = shadow.querySelector("#network-binarythresh");
         this.SELECTED_NETWORK_ACTIVATION = shadow.querySelector("#select-activation");
         this.NETWORK_LEAKY_RELU_ALPHA = shadow.querySelector("#network-leaky-relu-alpha");
@@ -375,21 +392,25 @@ class BrainUIEditor {
         this.NETWORK_RENDER = shadow.querySelector("#network-render");
 
         shadow.querySelector("#select-network").addEventListener('change', this.selectedNetworkChange.bind(this));
-        shadow.querySelector("#select-activation").addEventListener('change', this.selectedNetworkChange.bind(this));
+        shadow.querySelector("#network-try-calculate-btn").addEventListener('click', this.calculateNetworkSize.bind(this));
+        shadow.querySelector("#network-clear-fields-btn").addEventListener('click', this.clearNetworkFields.bind(this));
+        shadow.querySelector("#select-activation").addEventListener('change', this.selectedNetworkActivationChange.bind(this));
         shadow.querySelector("#network-render-graph").addEventListener('click', this.renderNetworkGraphWithConfig.bind(this));
         shadow.querySelector("#network-create-no-config").addEventListener('click', this.renderNetworkGraphNoConfig.bind(this));
 
-        //Training
+        // Training
         this.TRAINING_ITERATIONS = shadow.querySelector("#training-iterations");
         this.TRAINING_ERROR_THRESH = shadow.querySelector("#training-error-thresh");
         this.TRAINING_LEARNING_RATE = shadow.querySelector("#training-learning-rate");
         this.TRAINING_OUTPUT_LOG = shadow.querySelector("#training-output-log");
         this.TRAINING_PROGRESS = shadow.querySelector("#training-progress");
+        this.TRAINING_START_BTN = shadow.querySelector("#start-training-btn");
 
         shadow.querySelector("#training-btn").addEventListener('click', this.initTraining.bind(this));
         shadow.querySelector("#start-training-btn").addEventListener('click', this.startTraining.bind(this));
+        shadow.querySelector("#training-clear-fields-btn").addEventListener('click', this.clearTrainingFields.bind(this));
 
-        //testing
+        // Testing
         this.TESTING_INPUT_COLUMNS = shadow.querySelector("#testing-columns");
         this.TESTING_FORM = shadow.querySelector("#testing-form-wrapper");
         this.TESTING_RESULT = shadow.querySelector("#testing-result");
@@ -398,7 +419,7 @@ class BrainUIEditor {
         shadow.querySelector("#testing-generate-form-btn").addEventListener('click', this.generateTestingForm.bind(this));
         shadow.querySelector("#testing-run-btn").addEventListener('click', this.runTest.bind(this));
 
-        //export
+        // Export
         this.EXPORT_NOTHING_TO_EXPORT = shadow.querySelector("#export-nothing-to-export");
         this.EXPORT_READY_TO_EXPORT = shadow.querySelector("#export-ready-to-export");
         this.EXPORT_MODEL_NAME = shadow.querySelector("#export-model-name");
@@ -795,15 +816,109 @@ class BrainUIEditor {
     selectedNetworkChange(){
         this.#selectedNetwork = this.SELECTED_NETWORK.options[this.SELECTED_NETWORK.selectedIndex].value;
 
-        if (this.#selectedNetwork.startsWith("NEURALNETWORK")) {
-            this.initNeuralNetwork();
-        } else {
-            this.initRecurrentNeuralNetwork();
+        switch (this.#selectedNetwork) {
+            case "NEURALNETWORK": 
+                this.#network = new brain.NeuralNetwork();
+                this.mapDefaultNetworkConfigToInputFields();
+                this.initNeuralNetwork();
+                break;
+            case "NEURALNETWORKGPU":
+                this.#network = new brain.NeuralNetworkGPU();
+                this.mapDefaultNetworkConfigToInputFields();
+                this.initNeuralNetwork();
+                break;
+            case "NEURALNETWORK-FEED-FORWARD":
+                this.#network = new brain.FeedForward();
+                this.mapDefaultNetworkConfigToInputFields();
+                this.initNeuralNetwork();
+                break;
+            case "RECURRENTNEURALNETWORK-RNN-TIME-STEP": 
+                this.#network = new brain.recurrent.RNNTimeStep();
+                this.mapDefaultNetworkConfigToInputFields();
+                this.initRecurrentNeuralNetwork();
+                break;
+            case "RECURRENTNEURALNETWORK-LSTM-TIME-STEP":
+                this.#network = new brain.recurrent.LSTMTimeStep();
+                this.mapDefaultNetworkConfigToInputFields();
+                this.initRecurrentNeuralNetwork();
+                break;
+            case "RECURRENTNEURALNETWORK-GRU-TIME-STEP":
+                this.#network = new brain.recurrent.GRUTimeStep();
+                this.mapDefaultNetworkConfigToInputFields();
+                this.initRecurrentNeuralNetwork();
+                break;
+            case "RECURRENTNEURALNETWORK-RNN":
+                this.#network = new brain.recurrent.RNN();
+                this.mapDefaultNetworkConfigToInputFields();
+                this.initRecurrentNeuralNetwork();
+                break;
+            case "RECURRENTNEURALNETWORK-LSTM":
+                this.#network = new brain.recurrent.LSTM();
+                this.mapDefaultNetworkConfigToInputFields();
+                this.initRecurrentNeuralNetwork();
+                break;
+            case "RECURRENTNEURALNETWORK-GRU":
+                this.#network = new brain.recurrent.GRU();
+                this.mapDefaultNetworkConfigToInputFields();
+                this.initRecurrentNeuralNetwork();
+                break;
+            case "RECURRENTNEURALNETWORK":
+                this.#network = new brain.Recurrent();
+                this.mapDefaultNetworkConfigToInputFields();
+                this.initRecurrentNeuralNetwork();
+                break;
         }
     }
 
     selectedNetworkActivationChange(){
-        this.#selectedNetworkActivation = this.SELECTED_NETWORK_ACTIVATION.options[this.SELECTED_NETWORK_ACTIVATION.selectedIndex].value;
+        const selectedActivationOption = this.SELECTED_NETWORK_ACTIVATION.options[this.SELECTED_NETWORK_ACTIVATION.selectedIndex].value;
+
+        if (selectedActivationOption === "NONE" || selectedActivationOption === "SIGMOID") this.#selectedNetworkActivation = "sigmoid";
+        if (selectedActivationOption === "RELU") this.#selectedNetworkActivation = "relu"
+        if (selectedActivationOption === "LEAKYRELU") this.#selectedNetworkActivation = "leaky-relu"
+        if (selectedActivationOption === "TANH") this.#selectedNetworkActivation = "tanh"
+    }
+
+    mapDefaultNetworkConfigToInputFields() {
+        this.NETWORK_INPUT_LAYER.value = this.getValueForNetworkInputField("inputSize");
+        this.NETWORK_HIDDEN_LAYER.value = this.getValueForNetworkInputField("hiddenLayers");
+        this.NETWORK_OUTPUT_LAYER.value = this.getValueForNetworkInputField("outputSize");
+        this.NETWORK_LEAKY_RELU_ALPHA.value = this.getValueForNetworkInputField("leakyReluAlpha");
+        this.NETWORK_BINARYTHRESH.value = this.getValueForNetworkInputField("binaryThresh");
+        this.NETWORK_DECAY_RATE.value = this.getValueForNetworkInputField("decayRate");
+        this.NETWORK_SMOOTH_EPS.value = this.getValueForNetworkInputField("smoothEps");
+        this.NETWORK_REGC.value = this.getValueForNetworkInputField("regc");
+        this.NETWORK_CLIPVAL.value = this.getValueForNetworkInputField("clipval");
+        this.NETWORK_MAX_PREDICTION_LENGTH.value = this.getValueForNetworkInputField("maxPredictionLength");
+        this.NETWORK_LEARNING_RATE.value = this.getValueForNetworkInputField("learningRate"); 
+    }
+
+    getValueForNetworkInputField(networkProperty) {
+        const val = this.getPropertyValueFromObject(networkProperty, this.#network);
+        if (val === null) {
+            return "";
+        } else {
+            if ((typeof val === 'number') || Array.isArray(val)) {
+                return val;
+            } else {
+                return "";
+            }
+        }
+    }
+
+    getPropertyValueFromObject(propertyToFind, objectToFindIn) {
+        for (const [key, value] of Object.entries(objectToFindIn)) {
+            if((typeof value === 'string') || (typeof value === 'number') || Array.isArray(value)) {
+                if (key === propertyToFind) return value;
+            } else if (this.isObject(value)){
+                for (const [k, v] of Object.entries(value)) {
+                    if((typeof v === 'string') || (typeof v === 'number') || Array.isArray(v)) {
+                        if (k === propertyToFind) return v;
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     //Initialize neural network with default values
@@ -812,9 +927,6 @@ class BrainUIEditor {
         this.NETWORK_NN_FIELDS.classList.add("show");
         this.NETWORK_RNN_FIELDS.classList.remove("show");
         this.NETWORK_RNN_FIELDS.classList.add("hide");
-        this.calculateNetworkSize();
-        this.NETWORK_BINARYTHRESH.value = 0.5;
-        this.NETWORK_LEAKY_RELU_ALPHA.value = 0.01;
     }
 
     initRecurrentNeuralNetwork() {
@@ -822,48 +934,46 @@ class BrainUIEditor {
         this.NETWORK_RNN_FIELDS.classList.add("show");
         this.NETWORK_NN_FIELDS.classList.remove("show");
         this.NETWORK_NN_FIELDS.classList.add("hide");
-        this.calculateNetworkSize();
-        this.NETWORK_LEARNING_RATE.value = 0.01;
-        this.NETWORK_DECAY_RATE.value = 0.999;
-        this.NETWORK_MAX_PREDICTION_LENGTH.value = 100;
-        this.NETWORK_REGC.value = 0.000001;
-        this.NETWORK_CLIPVAL.value = 5;
-        this.NETWORK_SMOOTH_EPS.value = 1e-8;
+    }
+
+    clearNetworkFields() {
+        this.NETWORK_INPUT_LAYER.value = "";
+        this.NETWORK_HIDDEN_LAYER.value = "";
+        this.NETWORK_OUTPUT_LAYER.value = "";
+        this.NETWORK_LEAKY_RELU_ALPHA.value = "";
+        this.NETWORK_BINARYTHRESH.value = "";
+        this.NETWORK_DECAY_RATE.value = "";
+        this.NETWORK_SMOOTH_EPS.value = "";
+        this.NETWORK_REGC.value = "";
+        this.NETWORK_CLIPVAL.value = "";
+        this.NETWORK_MAX_PREDICTION_LENGTH.value = "";
+        this.NETWORK_LEARNING_RATE.value = "";
     }
 
     calculateNetworkSize() {
-        if (this.NETWORK_SIZE.value !== "") return;
-
-        let s = [];
         if (this.#brainTrainingData[0]?.input?.length) {
-            s.push(this.#brainTrainingData[0].input.length);
-            s.push(Math.max(3, Math.floor(this.#brainTrainingData[0].input.length / 2)));
-            s.push( this.#useOnlyInputData ? 1 : this.#brainTrainingData[0].output.length);
+            this.NETWORK_INPUT_LAYER.value = this.#brainTrainingData[0].input.length;
+            this.NETWORK_HIDDEN_LAYER.value = Math.max(3, Math.floor(this.#brainTrainingData[0].input.length / 2));
+            this.NETWORK_OUTPUT_LAYER.value = this.#brainTrainingData[0].output.length;
         } else {
             let inputLenght = 0;
             if (this.#brainTrainingData[0]?.input) {
                 for (var i in this.#brainTrainingData[0].input) { inputLenght++; }
-            } else if (this.#inputDataStructureType === "ARRAY-OF-STRINGS"){
-                inputLenght = 1;
             } else {
                 for (var i in this.#brainTrainingData[0]) { inputLenght++; }
             }
-            
+
             let outputLenght = 0;
-            if (this.#useOnlyInputData) {
-                outputLenght = 1;
-            } else if (this.#brainTrainingData[0].output) {
+            if (this.#brainTrainingData[0].output) {
                 for (var i in this.#brainTrainingData[0].output) { outputLenght++; }
             } else {
                 for (var i in this.#brainTrainingData[0]) { outputLenght++; }
             }
-            
-            
-            s.push(inputLenght);
-            s.push(Math.max(3, Math.floor(inputLenght / 2)));
-            s.push(outputLenght);
+
+            this.NETWORK_INPUT_LAYER.value = inputLenght;
+            this.NETWORK_HIDDEN_LAYER.value = Math.max(3, Math.floor(inputLenght / 2));
+            this.NETWORK_OUTPUT_LAYER.value = outputLenght;
         }
-        this.NETWORK_SIZE.value = s;
     }
 
     renderNetworkGraphNoConfig() {
@@ -949,7 +1059,7 @@ class BrainUIEditor {
     }
 
     getLabels() {
-        if (this.#dfInput.columns) {
+        if (this.#dfInput.columns && (this.#dfInput.columns.length === this.#networkConfig.inputRange)) {
             if (this.#dfInput.columns[0] === "input" || this.#dfInput.columns[0].input) {
                 let labels = [];
                 let counter = 0;
@@ -961,32 +1071,43 @@ class BrainUIEditor {
                 return this.#dfInput.columns;
             }
         } else {
-            if (this.#inputDataStructureType === "ARRAY-OF-STRINGS") {
-                this.#labels = "Text";
-                return ["Text"];
-            } else if (this.#inputDataStructureType === "ARRAY-OF-NUMBERS") {
-                this.#labels = "Number-Value";
-                return ["Value"];
-            } else {
-                this.#labels = "Input";
-                return ["Input"];
-            }
+            let labels = [];
+                for (let i = 0; i < this.#networkConfig.inputRange; i++) {labels.push("input-" + i)}
+                this.#labels = labels;
+                return labels;
         }
     }
 
     generateNeuralNetworkConfig() {
         try {
-            if (this.NETWORK_SIZE.value === "") this.calculateNetworkSize();
-            const size = this.NETWORK_SIZE.value.split(',').map((item) => {return parseInt(item, 10)});
-            this.#networkConfig = {
-                inputSize: size[0],
-                inputRange: size[0],
-                hiddenLayers: size.slice(1, size.length - 1),
-                outputSize: size[size.length - 1],
-                leakyReluAlpha: this.NETWORK_LEAKY_RELU_ALPHA.value === "" ? 0.01 : Number(this.NETWORK_LEAKY_RELU_ALPHA.value),
-                binaryThresh: this.NETWORK_BINARYTHRESH.value === "" ? 0.5 : Number(this.NETWORK_BINARYTHRESH.value),
-                activation: this.#selectedNetworkActivation === undefined ? 'sigmoid' : this.#selectedNetworkActivation
-            };
+            let config = {};
+
+            if (this.NETWORK_INPUT_LAYER.value !== "") {
+                config["inputSize"] = Number(this.NETWORK_INPUT_LAYER.value);
+                config["inputRange"] = Number(this.NETWORK_INPUT_LAYER.value);
+            }
+
+            if (this.NETWORK_HIDDEN_LAYER.value !== "") {
+                config["hiddenLayers"] = this.NETWORK_HIDDEN_LAYER.value.split(",");
+            }
+
+            if (this.NETWORK_OUTPUT_LAYER.value !== "") {
+                config["outputSize"] = Number(this.NETWORK_OUTPUT_LAYER.value);
+            }
+
+            if (this.NETWORK_LEAKY_RELU_ALPHA.value !== "") {
+                config["leakyReluAlpha"] = Number(this.NETWORK_LEAKY_RELU_ALPHA.value);
+            }
+
+            if (this.NETWORK_BINARYTHRESH.value !== "") {
+                config["binaryThresh"] = Number(this.NETWORK_BINARYTHRESH.value);
+            }
+
+            if (this.#selectedNetworkActivation !== undefined) {
+                config["activation"] = this.#selectedNetworkActivation;
+            }
+
+            this.#networkConfig = config;
         } catch(err) {
             toastr.error("Config error " + err);
         }
@@ -995,20 +1116,46 @@ class BrainUIEditor {
 
     generateRecurrentNeuralNetworkConfig() {
         try {
-            if (this.NETWORK_SIZE.value === "") this.calculateNetworkSize();
-            const size = this.NETWORK_SIZE.value.split(',').map((item) => {return parseInt(item, 10)});
-            this.#networkConfig = {
-                inputSize: size[0],
-                inputRange: size[0],
-                hiddenLayers: size.slice(1, size.length - 1),
-                outputSize: size[size.length - 1],
-                decayRate: this.NETWORK_DECAY_RATE.value === "" ? 0.999 : Number(this.NETWORK_DECAY_RATE.value),
-                smoothEps: Number(this.NETWORK_SMOOTH_EPS.value === "" ? 1e-8 : this.NETWORK_SMOOTH_EPS.value),
-                regc: this.NETWORK_REGC.value === "" ? 0.000001 : Number(this.NETWORK_REGC.value),
-                clipval: this.NETWORK_CLIPVAL.value === "" ? 5 : Number(this.NETWORK_CLIPVAL.value),
-                maxPredictionLength: this.NETWORK_MAX_PREDICTION_LENGTH.value === "" ? 100 : Number(this.NETWORK_MAX_PREDICTION_LENGTH.value),
-                learningRate: this.NETWORK_LEARNING_RATE.value === "" ? 0.01 : Number(this.NETWORK_LEARNING_RATE.value)
-            };
+            let config = {};
+
+            if (this.NETWORK_INPUT_LAYER.value !== "") {
+                config["inputSize"] = Number(this.NETWORK_INPUT_LAYER.value);
+                config["inputRange"] = Number(this.NETWORK_INPUT_LAYER.value);
+            }
+
+            if (this.NETWORK_HIDDEN_LAYER.value !== "") {
+                config["hiddenLayers"] = this.NETWORK_HIDDEN_LAYER.value.split(",");
+            }
+
+            if (this.NETWORK_OUTPUT_LAYER.value !== "") {
+                config["outputSize"] = Number(this.NETWORK_OUTPUT_LAYER.value);
+            }
+
+            if (this.NETWORK_DECAY_RATE.value !== "") {
+                config["decayRate"] = Number(this.NETWORK_DECAY_RATE.value);
+            }
+
+            if (this.NETWORK_SMOOTH_EPS.value !== "") {
+                config["smoothEps"] = Number(this.NETWORK_SMOOTH_EPS.value);
+            }
+
+            if (this.NETWORK_REGC.value !== "") {
+                config["regc"] = Number(this.NETWORK_REGC.value);
+            }
+
+            if (this.NETWORK_CLIPVAL.value !== "") {
+                config["clipval"] = Number(this.NETWORK_CLIPVAL.value);
+            }
+
+            if (this.NETWORK_MAX_PREDICTION_LENGTH.value !== "") {
+                config["maxPredictionLength"] = Number(this.NETWORK_MAX_PREDICTION_LENGTH.value);
+            }
+
+            if (this.NETWORK_LEARNING_RATE.value !== "") {
+                config["learningRate"] = Number(this.NETWORK_LEARNING_RATE.value);
+            }
+
+            this.#networkConfig = config;
         } catch(err) {
             toastr.error("Config error " + err);
         }
@@ -1044,85 +1191,55 @@ class BrainUIEditor {
         this.TRAINING_LEARNING_RATE.value = 0.1;
     }
 
+    clearTrainingFields() {
+        this.TRAINING_ITERATIONS.value = "";
+        this.TRAINING_ERROR_THRESH.value = "";
+        this.TRAINING_LEARNING_RATE.value = "";
+    }
+
     startTraining() {
-        try {
-            if (this.#selectedNetwork.startsWith("NEURALNETWORK")) {
-                this.trainNeuralNetwork();
-            } else {
-                this.trainReccurentNeuralNetwork();
+        this.TRAINING_START_BTN.setAttribute("aria-busy", true);
+        this.TRAINING_START_BTN.innerHTML = "Training..."
+
+        // Set a timeout so UI can update before long running process of training starts.
+        setTimeout(() => {
+            try {
+                this.trainNetwork();
+            } catch(err) {
+                this.TRAINING_START_BTN.setAttribute("aria-busy", false);
+                console.log(err);
+                toastr.error("Training error: " + err);
+                this.TRAINING_OUTPUT_LOG.innerHTML += "<div style='text-align: center; color:red'>Error: " + err + "</div>";
             }
-        } catch(err) {
-            console.log(err);
-            toastr.error("Training error: " + err);
-        }
-        
+        }, 20);  
     }
 
-    trainNeuralNetwork() {
-        this.#iterationCounter = 0;
-        this.#iterations = Number(this.TRAINING_ITERATIONS.value === "" ? 2000 : this.TRAINING_ITERATIONS.value);
-        this.#errorThresh = Number(this.TRAINING_ERROR_THRESH.value === "" ? 0.005 : this.TRAINING_ERROR_THRESH.value);
-        const learningRate = Number(this.TRAINING_LEARNING_RATE.value === "" ? 0.3 : this.TRAINING_LEARNING_RATE.value);
-        this.TRAINING_PROGRESS.max = this.#iterations;
-        console.log("training is starting");
-        const result = this.#network.train(this.#brainTrainingData, {
-            iterations: this.#iterations,
-            errorThresh: this.#errorThresh,
-            learningRate: learningRate,
-            log: details => this.trainingLog(details),
-            logPeriod: this.#logPeriod, 
-        });
-        if (result.iterations < this.#logPeriod)
-            this.TRAINING_OUTPUT_LOG.innerHTML += "<div style='text-align: center;'>Result error: " + result.error + " iterations: " + result.iterations + "</div>";
-    }
-
-    trainReccurentNeuralNetwork() {
-        this.#iterationCounter = 0;
-        this.#iterations = Number(this.TRAINING_ITERATIONS.value === "" ? 2000 : this.TRAINING_ITERATIONS.value);
-        this.#errorThresh = Number(this.TRAINING_ERROR_THRESH.value === "" ? 0.005 : this.TRAINING_ERROR_THRESH.value);
-        const learningRate = Number(this.TRAINING_LEARNING_RATE.value === "" ? 0.1 : this.TRAINING_LEARNING_RATE.value);
-        this.TRAINING_PROGRESS.max = this.#iterations;
-        const result = this.#network.train(this.#brainTrainingData, {
-            iterations: this.#iterations,
-            errorThresh: this.#errorThresh,
-            learningRate: learningRate,
-            log: details => this.trainingLog(details),
+    trainNetwork() {
+        let trainingConfig = {
+            log: details => console.log(details),
             logPeriod: this.#logPeriod,
-        });
-        if (result.iterations < this.#logPeriod)
-            this.TRAINING_OUTPUT_LOG.innerHTML += "<div style='text-align: center;'>Result error: " + result.error + " iterations: " + result.iterations + "</div>";
-    }
-
-    trainingLog(details) {
-        this.#iterationCounter += 1;
-        this.#trainedSuccessfully = false;
-        
-        this.TRAINING_PROGRESS.value = Number(this.#iterationCounter * this.#logPeriod);
-        
-        console.log(details);
-        let output = "";
-        if(this.#errorThresh >= details.error) {
-            output = "<div style='text-align: center; padding-top:1rem; padding-bottom: 1rem; color:red;'>";
-        } else {
-            output = "<div style='text-align: center; padding-top:1rem; padding-bottom: 1rem;'>";
         }
 
-        if(this.#iterations -1 <= Number(this.#iterationCounter * this.#logPeriod)) {
-            output = "<div style='text-align: center; padding-top:1rem; padding-bottom: 1rem; color:green;'>";
+        if (this.TRAINING_ITERATIONS.value !== "") {
+            trainingConfig["iterations"] = Number(this.TRAINING_ITERATIONS.value);
+        }
+
+        if (this.TRAINING_ERROR_THRESH.value !== "") {
+            trainingConfig["errorThresh"] = Number(this.TRAINING_ERROR_THRESH.value);
+        }
+
+        if (this.TRAINING_LEARNING_RATE.value !== "") {
+            trainingConfig["learningRate"] = Number(this.TRAINING_LEARNING_RATE.value);
+        }
+
+        const result = this.#network.train(this.#brainTrainingData, trainingConfig);
+
+        if (result) {
+            this.TRAINING_START_BTN.setAttribute("aria-busy", false);
+            this.TRAINING_START_BTN.innerHTML = "Start training"
             this.#trainedSuccessfully = true;
+            this.TRAINING_OUTPUT_LOG.innerHTML += "<div style='text-align: center;color:green'>Result error: " + result.error + " iterations: " + result.iterations + "</div>";
         }
-
-        if (this.#selectedNetwork.startsWith("NEURALNETWORK")) {
-            output += "Error: " + details.error + " Limit: " + this.#errorThresh;
-            output += "<br/>";
-            output += "Iterations: " + details.iterations + " of " + this.#iterations; 
-            output += "</div>";
-        } else {
-            output += "Progress: " + details;
-            output += "</div>";
-        }
-
-        this.TRAINING_OUTPUT_LOG.innerHTML = output;
     }
 
     //************** */
