@@ -213,10 +213,6 @@ text-align: center;
         </div>
         <div id="network-rnn-fields" class="hide">
             <span class="grid">
-                <label for="network-learningrate">
-                    Learning Rate
-                    <input type="text" id="network-learningrate" placeholder="Learning rate">
-                </label>
                 <label for="network-decayrate">
                     Decay Rate
                     <input type="text" id="network-decayrate" placeholder="Decay rate">
@@ -243,7 +239,7 @@ text-align: center;
         </div>
         <div class="grid">
             <button id="network-render-graph">Create & Render Network</button>
-            <button id="network-create-no-config">Create & Render Network without config</button>
+            <button id="network-create-no-config">Create & Render Network with default config</button>
         </div>
     </div>
     <div id="panel-training">
@@ -396,7 +392,6 @@ class BrainUIEditor {
         this.NETWORK_BINARYTHRESH = shadow.querySelector("#network-binarythresh");
         this.SELECTED_NETWORK_ACTIVATION = shadow.querySelector("#select-activation");
         this.NETWORK_LEAKY_RELU_ALPHA = shadow.querySelector("#network-leaky-relu-alpha");
-        this.NETWORK_LEARNING_RATE = shadow.querySelector("#network-learningrate");
         this.NETWORK_DECAY_RATE = shadow.querySelector("#network-decayrate");
         this.NETWORK_MAX_PREDICTION_LENGTH = shadow.querySelector("#network-max-prediction-length");
         this.NETWORK_REGC = shadow.querySelector("#network-regc");
@@ -913,7 +908,6 @@ class BrainUIEditor {
         this.NETWORK_REGC.value = this.getValueForNetworkInputField("regc");
         this.NETWORK_CLIPVAL.value = this.getValueForNetworkInputField("clipval");
         this.NETWORK_MAX_PREDICTION_LENGTH.value = this.getValueForNetworkInputField("maxPredictionLength");
-        this.NETWORK_LEARNING_RATE.value = this.getValueForNetworkInputField("learningRate"); 
     }
 
     getValueForNetworkInputField(networkProperty) {
@@ -1172,10 +1166,6 @@ class BrainUIEditor {
 
             if (this.NETWORK_MAX_PREDICTION_LENGTH.value !== "") {
                 config["maxPredictionLength"] = Number(this.NETWORK_MAX_PREDICTION_LENGTH.value);
-            }
-
-            if (this.NETWORK_LEARNING_RATE.value !== "") {
-                config["learningRate"] = Number(this.NETWORK_LEARNING_RATE.value);
             }
 
             this.#networkConfig = config;

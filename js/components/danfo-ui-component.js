@@ -40,6 +40,7 @@ text-align: center;
             <li><a href="#" role="button" id="view-btn">View</a></li>
             <li><a href="#" role="button" id="missing-btn">Missing Data</a></li>
             <li><a href="#" role="button" id="drop-btn">Drop</a></li>
+            <li><a href="#" role="button" id="add-btn">Add</a></li>
             <li><a href="#" role="button" id="replace-btn">Replace</a></li>
             <li><a href="#" role="button" id="scalar-btn">Scalar</a></li>
             <li><a href="#" role="button" id="save-btn">Save</a></li>
@@ -47,6 +48,7 @@ text-align: center;
             <li><a href="#" role="button" id="empty-btn" class="warning"><i class="fa-solid fa-trash-can"></i></a></li>
         </ul>
     </nav>
+    <hr/>
     <div id="panel-load">
         <div class="grid">
             <select id="select-filetype-load">
@@ -107,6 +109,11 @@ text-align: center;
     <div id="panel-drop">
         <div class="grid">
             <input type="txt" placeholder="Column name" id="drop-column"><button id="drop-column-by-name-btn">Drop</button>
+        </div>
+    </div>
+    <div id="panel-add">
+        <div class="grid">
+            <input type="txt" placeholder="Column name" id="add-column"><button id="add-column-by-name-btn">Add</button>
         </div>
     </div>
     <div id="panel-replace">
@@ -183,6 +190,7 @@ class DanfoEditor {
         this.COLUMN_MISSING_DATA = shadow.querySelector("#column-missing-data");
         this.COLUMN_VALUE_MISSING_DATA = shadow.querySelector("#column-value-missing-data");
         this.DROP_COLUMN = shadow.querySelector("#drop-column");
+        this.ADD_COLUMN = shadow.querySelector("#add-column");
         this.REPLACE_COLUMN = shadow.querySelector("#replace-column");
         this.REPLACE_OLD_VALUE = shadow.querySelector("#replace-old-value");
         this.REPLACE_NEW_VALUE = shadow.querySelector("#replace-new-value");
@@ -204,11 +212,12 @@ class DanfoEditor {
         shadow.querySelector("#select-filetype-download").addEventListener('change', this.selectFiletypeDownloadChange.bind(this));
         shadow.querySelector("#load-from-url").addEventListener('click', this.loadFromURL.bind(this));
         shadow.querySelector("#download-btn").addEventListener('click', this.downloadFile.bind(this));
-        shadow.querySelector("#drop-column-btn").addEventListener('click', this.dropColumn.bind(this));
+        shadow.querySelector("#drop-column-btn").addEventListener('click', this.dropNAColumn.bind(this));
         shadow.querySelector("#drop-row-btn").addEventListener('click', this.dropRow.bind(this));
         shadow.querySelector("#fill-missing-data-btn").addEventListener('click', this.fillMissingData.bind(this));
         shadow.querySelector("#fill-missing-column-data-btn").addEventListener('click', this.fillColumnMissingData.bind(this));
         shadow.querySelector("#drop-column-by-name-btn").addEventListener('click', this.dropColumn.bind(this));
+        shadow.querySelector("#add-column-by-name-btn").addEventListener('click', this.addColumn.bind(this));
         shadow.querySelector("#replace-value-btn").addEventListener('click', this.replaceValue.bind(this));
         shadow.querySelector("#load-localstorage-input-btn").addEventListener('click', this.loadLocalStorageInput.bind(this));
         shadow.querySelector("#load-localstorage-output-btn").addEventListener('click', this.loadLocalStorageOutput.bind(this));
@@ -395,7 +404,7 @@ class DanfoEditor {
         toastr.success("Output data saved");
     }
 
-    dropColumn(){
+    dropNAColumn(){
         this.#df = this.#df.dropNa({axis: 0});
         this.play();
     }
@@ -421,6 +430,17 @@ class DanfoEditor {
     dropColumn() {
         if (this.DROP_COLUMN.value === "") toastr.error("Fill in column name");
         this.#df.drop({ columns: this.DROP_COLUMN.value.split(',').map(item=>item.trim()), inplace: true });
+        this.play();
+    }
+
+    addColumn() {
+        if (this.ADD_COLUMN.value === "") toastr.error("Fill in column name");
+        let columnAsArray = this.#df.column(this.#df.columns[0]).values;
+        let fillWithNull = [];
+        for (let i = 0; i < columnAsArray.length; i++) {
+            fillWithNull.push(null);
+        }
+        this.#df = this.#df.addColumn(this.ADD_COLUMN.value, fillWithNull);
         this.play();
     }
 
@@ -477,6 +497,7 @@ class DanfoContentSwitcher {
         this.PANEL_VIEW = shadow.querySelector("#panel-view");
         this.PANEL_MISSING = shadow.querySelector("#panel-missing");
         this.PANEL_DROP = shadow.querySelector("#panel-drop");
+        this.PANEL_ADD = shadow.querySelector("#panel-add");
         this.PANEL_REPLACE = shadow.querySelector("#panel-replace");
         this.PANEL_SCALAR = shadow.querySelector("#panel-scalar");
         this.PANEL_SAVE = shadow.querySelector("#panel-save");
@@ -485,6 +506,7 @@ class DanfoContentSwitcher {
         shadow.querySelector("#view-btn").addEventListener('click', this.showView.bind(this));
         shadow.querySelector("#missing-btn").addEventListener('click', this.showMissingData.bind(this));
         shadow.querySelector("#drop-btn").addEventListener('click', this.showDrop.bind(this));
+        shadow.querySelector("#add-btn").addEventListener('click', this.showAdd.bind(this));
         shadow.querySelector("#replace-btn").addEventListener('click', this.showReplace.bind(this));
         shadow.querySelector("#scalar-btn").addEventListener('click', this.showScalar.bind(this));
         shadow.querySelector("#save-btn").addEventListener('click', this.showSave.bind(this));
@@ -510,6 +532,11 @@ class DanfoContentSwitcher {
     showDrop() {
         this.hideAll();
         this.PANEL_DROP.classList.add("show");
+    }
+
+    showAdd() {
+        this.hideAll();
+        this.PANEL_ADD.classList.add("show");
     }
 
     showReplace(){
@@ -539,6 +566,9 @@ class DanfoContentSwitcher {
 
         this.PANEL_DROP.classList.remove("show");
         this.PANEL_DROP.classList.add("hide");
+
+        this.PANEL_ADD.classList.remove("show");
+        this.PANEL_ADD.classList.add("hide");
 
         this.PANEL_REPLACE.classList.remove("show");
         this.PANEL_REPLACE.classList.add("hide");
