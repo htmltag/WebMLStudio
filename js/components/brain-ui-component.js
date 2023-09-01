@@ -1292,9 +1292,15 @@ class BrainUIEditor {
     }
 
     runTest() {
-        if (this.#testingInputFormat === "OBJECT") console.log("test input JSON.stringify: " + JSON.stringify(this.generateTestInput()));
-        this.TESTING_RESULT.innerHTML = "";
-        this.TESTING_RESULT.innerHTML = JSON.stringify(this.#network.run(this.generateTestInput()));
+        try {
+            this.TESTING_RESULT.innerHTML = "";
+            this.TESTING_RESULT.innerHTML = JSON.stringify(this.#network.run(this.generateTestInput()));
+            toastr.success("Run complete");
+        } catch(err) {
+            toastr.error("Network run failed. " + err);
+        }
+        
+
     }
 
     forcast() {

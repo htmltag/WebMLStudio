@@ -27,6 +27,10 @@ h2 {
 text-align: center;
 }
 
+.flex-grid {
+    display: flex;
+}
+
 #danfo-output {
     background-color: #fff;
     min-height: 400px;
@@ -43,6 +47,7 @@ text-align: center;
             <li><a href="#" role="button" id="add-btn">Add</a></li>
             <li><a href="#" role="button" id="replace-btn">Replace</a></li>
             <li><a href="#" role="button" id="scalar-btn">Scalar</a></li>
+            <li><a href="#" role="button" id="categorize-btn">Categorize</a></li>
             <li><a href="#" role="button" id="save-btn">Save</a></li>
             <li><a href="#" role="button" id="play-btn"><i class="fa-solid fa-play"></i></a></li>
             <li><a href="#" role="button" id="empty-btn" class="warning"><i class="fa-solid fa-trash-can"></i></a></li>
@@ -138,6 +143,50 @@ text-align: center;
             <button id="scalar-apply-btn">Apply</button>
         </div>
     </div>
+    <div id="panel-categorize">
+        <div class="grid">
+            <label for="categorize-from-column">
+                Find values in column: 
+                <input type="text" id="categorize-from-column"> 
+            </label>
+            <label for="select-categorize-operation">
+                that are
+                <select id="select-categorize-operation">
+                    <option value="NONE" disabled selected>Select operation</option>
+                    <option value="GREATER">Greater than</option>
+                    <option value="LESS">Less than</option>
+                    <option value="BETWEEN">Between</option>
+                </select>
+            </label>
+        </div>
+        <div class="grid">
+            <label for="categorize-value-one">
+                the value 
+                <input type="text" id="categorize-value-one">
+            </label>
+            <span id="categorize-between-wrapper" class="hide">
+                <label for="categorize-value-two"> 
+                    and value 
+                    <input type="text" id="categorize-value-two">
+                </label>
+            </span> 
+        </div>
+        <div class="grid">
+            <label for="categorize-to-column">
+                apply them to column 
+                <input type="text" id="categorize-to-column">
+            </label>
+            <label for="categorize-value-to-column">
+                as value 
+                <input type="text" id="categorize-value-to-column">
+            </label>
+            <label for="categorize-default-value-to-column">
+                value where criteria is not met
+                <input type="text" id="categorize-default-value-to-column"> 
+            </label>
+        </div>
+        <button id="categorize-apply-btn">Apply categorization</button>
+    </div>
     <div id="panel-save">
         <div class="grid">
             <input type="txt" id="filename" placeholder="filename">
@@ -173,6 +222,7 @@ class DanfoEditor {
     #selectedFiletypeDownload = "NONE";
     #selectedLocalStorageSave = "NONE";
     #selectedArithmetic = "NONE";
+    #selectCategorizeOperation = "NONE";
     
 
     constructor(shadow) {
@@ -197,8 +247,14 @@ class DanfoEditor {
         this.SELECT_ARITHMETIC = shadow.querySelector("#select-arithmetic");
         this.SCALAR_COLUMN = shadow.querySelector("#scalar-column");
         this.SCALAR_VALUE = shadow.querySelector("#scalar-value");
-
- 
+        this.CATEGORIZE_FROM_COLUMN = shadow.querySelector("#categorize-from-column");
+        this.CATEGORIZE_TO_COLUMN = shadow.querySelector("#categorize-to-column");
+        this.CATEGORIZE_VALUE_TO_COLUMN = shadow.querySelector("#categorize-value-to-column");
+        this.CATEGORIZE_DEFAULT_VALUE_TO_COLUMN = shadow.querySelector("#categorize-default-value-to-column");
+        this.SELECT_CATEGORIZE_OPERATION = shadow.querySelector("#select-categorize-operation");
+        this.CATEGORIZE_VALUE_ONE = shadow.querySelector("#categorize-value-one");
+        this.CATEGORIZE_VALUE_TWO = shadow.querySelector("#categorize-value-two");
+        this.CATEGORIZE_BETWEEN_WRAPPER = shadow.querySelector("#categorize-between-wrapper");
 
         shadow.querySelector("#play-btn").addEventListener('click', this.play.bind(this));
         shadow.querySelector("#scatter-btn").addEventListener('click', this.scatterPlot.bind(this));
@@ -227,7 +283,9 @@ class DanfoEditor {
         shadow.querySelector("#select-localstorage-save").addEventListener('change', this.selectLocalStorageSaveChange.bind(this));
         shadow.querySelector("#scalar-apply-btn").addEventListener('click', this.applyScalar.bind(this));
         shadow.querySelector("#select-arithmetic").addEventListener('change', this.selectArithmeticChange.bind(this));
-        
+        shadow.querySelector("#select-categorize-operation").addEventListener('change', this.selectCategorizeOperationChange.bind(this));
+        shadow.querySelector("#categorize-apply-btn").addEventListener('click', this.applyCategorization.bind(this));
+
         this.init();
     }
 
@@ -295,6 +353,18 @@ class DanfoEditor {
 
     selectArithmeticChange() {
         this.#selectedArithmetic = this.SELECT_ARITHMETIC.options[this.SELECT_ARITHMETIC.selectedIndex].value;
+    }
+
+    selectCategorizeOperationChange() {
+        this.#selectCategorizeOperation = this.SELECT_CATEGORIZE_OPERATION.options[this.SELECT_CATEGORIZE_OPERATION.selectedIndex].value;
+
+        if (this.#selectCategorizeOperation === "BETWEEN") {
+            this.CATEGORIZE_BETWEEN_WRAPPER.classList.remove("hide");
+            this.CATEGORIZE_BETWEEN_WRAPPER.classList.add("show");
+        } else {
+            this.CATEGORIZE_BETWEEN_WRAPPER.classList.remove("show");
+            this.CATEGORIZE_BETWEEN_WRAPPER.classList.add("hide");
+        }
     }
 
     loadInputFile() {
@@ -457,7 +527,7 @@ class DanfoEditor {
         this.play();
     }
 
-    applyScalar(){
+    applyScalar() {
         if (this.#selectedArithmetic === "") toastr.error("Select type of arithmetic to use");
         if (this.SCALAR_COLUMN.value === "") toastr.error("Fill in a column");
         if (this.SCALAR_VALUE.value === "") toastr.error("Fill in a value");
@@ -488,6 +558,48 @@ class DanfoEditor {
         
         this.play();
     }
+
+    applyCategorization() {
+        if (this.CATEGORIZE_DEFAULT_VALUE_TO_COLUMN.value === "" ) toastr.error("Fill in column");
+        if (this.CATEGORIZE_FROM_COLUMN.value === "" ) toastr.error("Fill in missing value");
+        if (this.CATEGORIZE_TO_COLUMN.value === "") toastr.error("Fill in missing value");
+        if (this.CATEGORIZE_VALUE_ONE.value === "") toastr.error("Fill in missing value");
+        if (this.#selectCategorizeOperation === "NONE") toastr.error("Select categorixation operation");
+        if (this.CATEGORIZE_VALUE_TO_COLUMN.value == "") toastr.error("Fill in column");
+        
+        let columnAsArray = this.#df.column(this.CATEGORIZE_FROM_COLUMN.value).values;
+        const valueTofind = Number(this.CATEGORIZE_VALUE_ONE.value);
+        const valueToSet = Number(this.CATEGORIZE_VALUE_TO_COLUMN.value);
+        const defaultToValue = Number(this.CATEGORIZE_DEFAULT_VALUE_TO_COLUMN.value);
+        const toColumn = this.CATEGORIZE_TO_COLUMN.value;
+        let secondValueToFind = 0;
+        if (this.#selectCategorizeOperation === "BETWEEN") {
+            if (this.CATEGORIZE_VALUE_TWO.value === "") {
+                toastr.error("Missing input value");
+                return;
+            } 
+            secondValueToFind = Number(this.CATEGORIZE_VALUE_TWO.value);
+        }
+
+        let newValuesArray = [];
+        columnAsArray.forEach((val) => {
+            if (this.#selectCategorizeOperation === "GREATER") {
+                newValuesArray.push(val > valueTofind ? valueToSet : defaultToValue);
+            } else if (this.#selectCategorizeOperation === "LESS") {
+                newValuesArray.push(val < valueTofind ? valueToSet : defaultToValue);
+            } else {
+                newValuesArray.push((val > valueTofind && val < secondValueToFind) ? valueToSet : defaultToValue);
+            }
+        })
+
+        if (this.#df.columns.includes(toColumn)) {
+            this.#df = this.#df.drop({ columns: toColumn });
+        } 
+
+        this.#df = this.#df.addColumn(toColumn, newValuesArray);
+
+        this.play();
+    }
 }
 
 class DanfoContentSwitcher {
@@ -500,6 +612,7 @@ class DanfoContentSwitcher {
         this.PANEL_ADD = shadow.querySelector("#panel-add");
         this.PANEL_REPLACE = shadow.querySelector("#panel-replace");
         this.PANEL_SCALAR = shadow.querySelector("#panel-scalar");
+        this.PANEL_CATEGORIZE = shadow.querySelector("#panel-categorize");
         this.PANEL_SAVE = shadow.querySelector("#panel-save");
 
         shadow.querySelector("#load-btn").addEventListener('click', this.showLoad.bind(this));
@@ -509,6 +622,7 @@ class DanfoContentSwitcher {
         shadow.querySelector("#add-btn").addEventListener('click', this.showAdd.bind(this));
         shadow.querySelector("#replace-btn").addEventListener('click', this.showReplace.bind(this));
         shadow.querySelector("#scalar-btn").addEventListener('click', this.showScalar.bind(this));
+        shadow.querySelector("#categorize-btn").addEventListener('click', this.showCategorize.bind(this));
         shadow.querySelector("#save-btn").addEventListener('click', this.showSave.bind(this));
         this.hideAll();
         this.PANEL_LOAD.classList.add("show");
@@ -549,6 +663,11 @@ class DanfoContentSwitcher {
         this.PANEL_SCALAR.classList.add("show");
     }
 
+    showCategorize() {
+        this.hideAll();
+        this.PANEL_CATEGORIZE.classList.add("show");
+    }
+
     showSave() {
         this.hideAll();
         this.PANEL_SAVE.classList.add("show");
@@ -575,6 +694,9 @@ class DanfoContentSwitcher {
 
         this.PANEL_SCALAR.classList.remove("show");
         this.PANEL_SCALAR.classList.add("hide");
+
+        this.PANEL_CATEGORIZE.classList.remove("show");
+        this.PANEL_CATEGORIZE.classList.add("hide");
 
         this.PANEL_SAVE.classList.remove("show");
         this.PANEL_SAVE.classList.add("hide");
