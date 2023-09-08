@@ -3,7 +3,7 @@ template.innerHTML = `
 <style>
 @import "/css/pico.min.css";
 @import "/css/custom.css";
-@import "/assets/fontawesome/css/all.css";
+@import "/studioassets/fontawesome/css/all.css";
 h1 {
     font-size: 1.2rem
 }
