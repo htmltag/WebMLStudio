@@ -15,7 +15,7 @@ const maincontentSwitcher = {
             return window.sessionStorage.getItem(this.sessionStorageKey);
           }
         }
-        return "greeting-mainconent";
+        return "project-selector-mainconent";
     },
 
     maincontentToSessionStorage(contentName) {
