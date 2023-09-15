@@ -399,28 +399,32 @@ class DanfoEditor {
         const url = this.URL_TO_DATASET.value;
         const delimiter = this.DELIMITER.value ? this.DELIMITER.value : ",";
 
-        switch (this.#selectedFiletypeLoad) {
-            case 'NONE':
-                toastr.error('Please select filetype');
-                break;
-            case 'JSON':
-                dfd.readJSON(url).then((df) => {
-                    this.#df = df;
-                    this.play();
-                });
-                break;
-            case 'EXCEL':
-                dfd.readExcel(url).then((df) => {
-                    this.#df = df;
-                    this.play();
-                });
-                break;
-            case 'CSV':
-                dfd.readCSV(url, {delimeter: delimiter}).then((df) => {
-                    this.#df = df;
-                    this.play();
-                });
-                break;
+        try {
+            switch (this.#selectedFiletypeLoad) {
+                case 'NONE':
+                    toastr.error('Please select filetype');
+                    break;
+                case 'JSON':
+                    dfd.readJSON(url).then((df) => {
+                        this.#df = df;
+                        this.play();
+                    });
+                    break;
+                case 'EXCEL':
+                    dfd.readExcel(url).then((df) => {
+                        this.#df = df;
+                        this.play();
+                    });
+                    break;
+                case 'CSV':
+                    dfd.readCSV(url, {delimeter: delimiter}).then((df) => {
+                        this.#df = df;
+                        this.play();
+                    });
+                    break;
+            }
+        } catch(err) {
+            toastr.error("Cound not load file. Error: " + err);
         }
     }
 
